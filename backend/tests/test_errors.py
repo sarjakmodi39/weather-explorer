@@ -36,6 +36,27 @@ def test_unhandled_exception_does_not_leak_internals():
     assert "secret connection string" not in body["message"]
 
 
+def test_validation_error_maps_to_400_not_422():
+    """FastAPI defaults request validation failures to 422; we deliberately
+    remap to 400 so every failure mode in the API uses the same status-code
+    family and the same uniform envelope."""
+    app = create_app()
+
+    @app.get("/validate")
+    async def validate(count: int):
+        return {"count": count}
+
+    client = TestClient(app)
+    response = client.get("/validate", params={"count": "not-a-number"})
+
+    assert response.status_code == 400
+    assert response.status_code != 422
+    body = response.json()
+    assert set(body.keys()) == {"status", "message"}
+    assert body["status"] == "error"
+    assert isinstance(body["message"], str) and body["message"]
+
+
 def test_health_endpoint():
     client = TestClient(create_app())
     response = client.get("/health")
