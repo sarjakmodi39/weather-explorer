@@ -64,15 +64,30 @@ class GCSStorage:
     _LIST_FIELDS = "items(name,size,timeCreated),nextPageToken"
 
     def __init__(self, bucket_name: str, client: gcs.Client | None = None) -> None:
-        if not bucket_name:
-            raise AppError("GCS_BUCKET is not configured", status_code=500)
+        # Inert by design: construction must never raise. FastAPI resolves
+        # `Depends(get_storage)` before it validates the request body, so an
+        # eager failure here would shadow a genuine 400 with a 500. Both the
+        # empty-bucket check and the real client construction are deferred to
+        # `_client`, which fires on first actual use.
         self._bucket_name = bucket_name
-        try:
-            self._client = client or gcs.Client()
-        except gauth_exceptions.GoogleAuthError as exc:
-            raise AppError(
-                f"could not authenticate with storage: {exc}", status_code=502
-            ) from exc
+        self._injected_client = client
+        self._client_cache: gcs.Client | None = None
+
+    @property
+    def _client(self) -> gcs.Client:
+        if self._client_cache is None:
+            if not self._bucket_name:
+                raise AppError("GCS_BUCKET is not configured", status_code=500)
+            if self._injected_client is not None:
+                self._client_cache = self._injected_client
+            else:
+                try:
+                    self._client_cache = gcs.Client()
+                except gauth_exceptions.GoogleAuthError as exc:
+                    raise AppError(
+                        f"could not authenticate with storage: {exc}", status_code=502
+                    ) from exc
+        return self._client_cache
 
     def save_json(self, name: str, payload: dict) -> None:
         blob = self._client.bucket(self._bucket_name).blob(name)

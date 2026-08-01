@@ -3,8 +3,12 @@ from datetime import datetime, timedelta, timezone
 import httpx
 import pytest
 import respx
+from fastapi.testclient import TestClient
 
+from app.deps import get_storage
+from app.main import create_app
 from app.naming import is_valid_object_name
+from app.services.storage import GCSStorage
 
 ARCHIVE = "https://archive-api.open-meteo.com/v1/archive"
 
@@ -198,3 +202,30 @@ def test_store_then_read_back(client):
 
     assert response.status_code == 200
     assert response.json() == SAMPLE
+
+
+def test_invalid_body_still_gets_validated_when_storage_would_fail():
+    """Regression test: a failing storage dependency must not shadow a bad
+    request body.
+
+    GCSStorage with an empty bucket name only fails on first use (lazily),
+    not at construction, so FastAPI's dependency resolution (which runs
+    before body validation) cannot short-circuit here. Before the fix,
+    GCSStorage("") raised in __init__ and the dependency itself failed
+    first, so an invalid body never got the chance to be rejected with 400
+    — it always came back as 500 "GCS_BUCKET is not configured", regardless
+    of what was in the body.
+
+    This builds its own app and override rather than using conftest's
+    `client`/`storage` fixtures, which use InMemoryStorage and would never
+    exercise this failure path.
+    """
+    app = create_app()
+    app.dependency_overrides[get_storage] = lambda: GCSStorage("")
+    client = TestClient(app)
+
+    response = client.post("/store-weather-data", json={**VALID, "latitude": 999})
+
+    assert response.status_code == 400
+    assert response.json()["status"] == "error"
+    assert "latitude" in response.json()["message"]
