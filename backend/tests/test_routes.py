@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 import httpx
 import respx
 
@@ -91,3 +93,45 @@ def test_store_rejects_a_non_json_body(client):
 
     assert response.status_code == 400
     assert response.json()["status"] == "error"
+
+
+def test_list_is_empty_for_a_fresh_bucket(client):
+    response = client.get("/list-weather-files")
+
+    assert response.status_code == 200
+    assert response.json() == {"files": []}
+
+
+def test_list_returns_name_size_and_created_at(client, storage):
+    storage.save_json("weather_a.json", {"daily": {"time": ["2024-06-01"]}})
+
+    response = client.get("/list-weather-files")
+
+    assert response.status_code == 200
+    [entry] = response.json()["files"]
+    assert entry["name"] == "weather_a.json"
+    assert isinstance(entry["size"], int) and entry["size"] > 0
+    # Must parse as ISO 8601.
+    datetime.fromisoformat(entry["created_at"])
+
+
+def test_list_is_ordered_newest_first(client, storage):
+    base = datetime(2026, 8, 1, tzinfo=timezone.utc)
+    storage.save_json("older.json", {"a": 1}, created_at=base)
+    storage.save_json("newest.json", {"a": 1}, created_at=base + timedelta(hours=2))
+    storage.save_json("middle.json", {"a": 1}, created_at=base + timedelta(hours=1))
+
+    names = [f["name"] for f in client.get("/list-weather-files").json()["files"]]
+
+    assert names == ["newest.json", "middle.json", "older.json"]
+
+
+@respx.mock
+def test_a_stored_file_appears_in_the_listing(client):
+    """End-to-end within the backend: store then list."""
+    respx.get(ARCHIVE).mock(return_value=httpx.Response(200, json=SAMPLE))
+
+    name = client.post("/store-weather-data", json=VALID).json()["file"]
+    names = [f["name"] for f in client.get("/list-weather-files").json()["files"]]
+
+    assert name in names

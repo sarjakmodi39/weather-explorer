@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends
 
 from app.deps import get_storage
 from app.naming import build_object_name
-from app.schemas import StoreWeatherRequest, StoreWeatherResponse
+from app.schemas import ListFilesResponse, StoreWeatherRequest, StoreWeatherResponse
 from app.services.open_meteo import fetch_daily_history
 from app.services.storage import StorageClient
 
@@ -39,3 +39,14 @@ async def store_weather_data(
     storage.save_json(name, payload)
 
     return StoreWeatherResponse(status="ok", file=name)
+
+
+@router.get("/list-weather-files", response_model=ListFilesResponse)
+async def list_weather_files(
+    storage: StorageClient = Depends(get_storage),
+) -> ListFilesResponse:
+    """List stored objects, newest first.
+
+    One SDK call with a field mask — no per-object metadata fetches.
+    """
+    return ListFilesResponse(files=storage.list_files())
