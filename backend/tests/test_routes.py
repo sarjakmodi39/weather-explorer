@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
 import httpx
+import pytest
 import respx
 
 from app.naming import is_valid_object_name
@@ -26,6 +27,8 @@ VALID = {
     "start_date": "2024-06-01",
     "end_date": "2024-06-02",
 }
+
+NOT_FOUND = {"status": "error", "message": "not found"}
 
 
 @respx.mock
@@ -135,3 +138,63 @@ def test_a_stored_file_appears_in_the_listing(client):
     names = [f["name"] for f in client.get("/list-weather-files").json()["files"]]
 
     assert name in names
+
+
+def test_content_round_trips_stored_json(client, storage):
+    payload = {"daily": {"time": ["2024-06-01"], "temperature_2m_max": [34.4]}}
+    name = "weather_19.0760_72.8777_2024-06-01_2024-06-02_20260801T142530Z.json"
+    storage.save_json(name, payload)
+
+    response = client.get(f"/weather-file-content/{name}")
+
+    assert response.status_code == 200
+    assert response.json() == payload
+
+
+def test_content_returns_404_for_a_missing_file(client):
+    name = "weather_19.0760_72.8777_2024-06-01_2024-06-02_20260801T142530Z.json"
+
+    response = client.get(f"/weather-file-content/{name}")
+
+    assert response.status_code == 404
+    assert response.json() == NOT_FOUND
+
+
+@pytest.mark.parametrize(
+    "hostile",
+    [
+        "..%2F..%2Fetc%2Fpasswd",
+        "random.json",
+        "weather.json",
+        "weather_19.0760_72.8777_2024-06-01_2024-06-02_20260801T142530Z.txt",
+    ],
+)
+def test_content_returns_404_for_invalid_names(client, hostile):
+    """Malformed and missing are deliberately indistinguishable — it leaks nothing."""
+    response = client.get(f"/weather-file-content/{hostile}")
+
+    assert response.status_code == 404
+    assert response.json() == NOT_FOUND
+
+
+def test_invalid_name_never_reaches_storage(client, monkeypatch, storage):
+    def explode(_name):
+        raise AssertionError("storage must not be queried for an invalid name")
+
+    monkeypatch.setattr(storage, "get_json", explode)
+
+    response = client.get("/weather-file-content/not-our-shape.json")
+
+    assert response.status_code == 404
+
+
+@respx.mock
+def test_store_then_read_back(client):
+    """Full backend round trip: store -> list -> read."""
+    respx.get(ARCHIVE).mock(return_value=httpx.Response(200, json=SAMPLE))
+
+    name = client.post("/store-weather-data", json=VALID).json()["file"]
+    response = client.get(f"/weather-file-content/{name}")
+
+    assert response.status_code == 200
+    assert response.json() == SAMPLE
