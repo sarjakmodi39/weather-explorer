@@ -30,3 +30,28 @@ def test_preflight_permits_post():
 def test_origin_list_splits_and_trims():
     settings = Settings(allowed_origins="http://a.com, https://b.com ,")
     assert settings.origin_list == ["http://a.com", "https://b.com"]
+
+
+def test_disallowed_origin_receives_no_cors_header():
+    # CORS uses an explicit allowlist, never "*" — this origin is not in it,
+    # so the response must carry no access-control-allow-origin header at
+    # all. A regression to allow_origins=["*"] would still differ from the
+    # evil origin's own value, so absence (not a mismatch) is what we assert.
+    client = TestClient(create_app())
+    response = client.get("/health", headers={"Origin": "https://evil.example.com"})
+
+    assert "access-control-allow-origin" not in response.headers
+
+
+def test_disallowed_origin_preflight_receives_no_cors_header():
+    client = TestClient(create_app())
+    response = client.options(
+        "/store-weather-data",
+        headers={
+            "Origin": "https://evil.example.com",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+
+    assert "access-control-allow-origin" not in response.headers
