@@ -58,3 +58,22 @@ def test_defaults_to_current_utc_time():
 )
 def test_rejects_malformed_and_hostile_names(hostile):
     assert not is_valid_object_name(hostile)
+
+
+def test_rejects_unicode_digits():
+    """Unicode digits must be rejected — build_object_name only generates ASCII."""
+    # Arabic-Indic digits
+    assert not is_valid_object_name(
+        "weather_١٩.٠٧٦٠_٧٢.٨٧٧٧_2024-06-01_2024-06-10_20260801T142530Z.json"
+    )
+    # Fullwidth digits
+    assert not is_valid_object_name(
+        "weather_１９.０７６０_72.8777_2024-06-01_2024-06-10_20260801T142530Z.json"
+    )
+
+
+def test_rejects_trailing_newline():
+    """Trailing newline must be rejected; fullmatch() defeats the $-escape exploit."""
+    valid_name = "weather_19.0760_72.8777_2024-06-01_2024-06-10_20260801T142530Z.json"
+    assert is_valid_object_name(valid_name)
+    assert not is_valid_object_name(valid_name + "\n")

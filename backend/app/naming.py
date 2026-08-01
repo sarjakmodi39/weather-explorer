@@ -12,6 +12,10 @@ from datetime import date, datetime, timezone
 # weather_<lat>_<lon>_<start>_<end>_<timestamp>.json
 # Coordinates are always signed-optional with exactly 4 decimal places, which
 # is what build_object_name emits.
+# re.ASCII ensures \d matches only ASCII 0-9, not Unicode digits like ١٩ or １９.
+# This is critical because build_object_name only generates ASCII output, so
+# accepting Unicode digits would violate the security promise: "only names this
+# service could itself have generated."
 OBJECT_NAME_PATTERN = re.compile(
     r"^weather_"
     r"(-?\d{1,3}\.\d{4})_"          # latitude
@@ -19,7 +23,8 @@ OBJECT_NAME_PATTERN = re.compile(
     r"(\d{4}-\d{2}-\d{2})_"         # start date
     r"(\d{4}-\d{2}-\d{2})_"         # end date
     r"(\d{8}T\d{6}Z)"               # UTC timestamp
-    r"\.json$"
+    r"\.json$",
+    re.ASCII,
 )
 
 TIMESTAMP_FORMAT = "%Y%m%dT%H%M%SZ"
