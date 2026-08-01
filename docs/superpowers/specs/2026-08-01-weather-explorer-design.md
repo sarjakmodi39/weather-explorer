@@ -22,7 +22,7 @@ A live, publicly reachable dashboard backed by a live API, in a public GitHub re
 ## Repository layout
 
 ```
-inrisk-weather-explorer/
+<repo root>/
 ├─ backend/
 │  ├─ app/
 │  │  ├─ main.py              app factory, CORS, exception handlers
@@ -93,7 +93,7 @@ Normalizing precision makes names predictable — `19.076` and `19.0760` produce
 
 ### `GET /list-weather-files`
 
-Returns `{"files": [{"name", "size", "created_at"}]}`, sorted newest-first.
+Returns `{"files": [{"name": str, "size": int, "created_at": str}]}`, sorted newest-first. `size` is bytes; `created_at` is ISO 8601 with timezone (GCS `timeCreated`, e.g. `2026-08-01T14:25:30Z`).
 
 Efficiency: a single `list_blobs` call with a `fields` mask (`items(name,size,timeCreated),nextPageToken`) so GCS returns only the three needed fields. No per-object metadata fetches, no client-side filtering. Empty bucket returns `{"files": []}`, not an error.
 
