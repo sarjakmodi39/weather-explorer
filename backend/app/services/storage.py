@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Protocol
 
 from google.api_core import exceptions as gcp_exceptions
+from google.auth import exceptions as gauth_exceptions
 from google.cloud import storage as gcs
 
 from app.errors import AppError
@@ -66,7 +67,12 @@ class GCSStorage:
         if not bucket_name:
             raise AppError("GCS_BUCKET is not configured", status_code=500)
         self._bucket_name = bucket_name
-        self._client = client or gcs.Client()
+        try:
+            self._client = client or gcs.Client()
+        except gauth_exceptions.GoogleAuthError as exc:
+            raise AppError(
+                f"could not authenticate with storage: {exc}", status_code=502
+            ) from exc
 
     def save_json(self, name: str, payload: dict) -> None:
         blob = self._client.bucket(self._bucket_name).blob(name)
@@ -75,6 +81,10 @@ class GCSStorage:
                 json.dumps(payload),
                 content_type="application/json",
             )
+        except gauth_exceptions.GoogleAuthError as exc:
+            raise AppError(
+                f"could not authenticate with storage: {exc}", status_code=502
+            ) from exc
         except gcp_exceptions.GoogleAPIError as exc:
             raise AppError(f"could not write to storage: {exc}", status_code=502) from exc
 
@@ -89,6 +99,10 @@ class GCSStorage:
                 )
                 for blob in blobs
             ]
+        except gauth_exceptions.GoogleAuthError as exc:
+            raise AppError(
+                f"could not authenticate with storage: {exc}", status_code=502
+            ) from exc
         except gcp_exceptions.GoogleAPIError as exc:
             raise AppError(f"could not list storage: {exc}", status_code=502) from exc
 
@@ -100,6 +114,10 @@ class GCSStorage:
             raw = blob.download_as_bytes()
         except gcp_exceptions.NotFound:
             return None
+        except gauth_exceptions.GoogleAuthError as exc:
+            raise AppError(
+                f"could not authenticate with storage: {exc}", status_code=502
+            ) from exc
         except gcp_exceptions.GoogleAPIError as exc:
             raise AppError(f"could not read from storage: {exc}", status_code=502) from exc
 
