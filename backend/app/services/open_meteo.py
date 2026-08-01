@@ -24,7 +24,6 @@ DAILY_VARIABLES = [
 ]
 
 TIMEOUT_SECONDS = 30.0
-RETRIES = 1
 
 
 async def fetch_daily_history(
@@ -47,9 +46,12 @@ async def fetch_daily_history(
         "timezone": "auto",
     }
 
-    transport = httpx.AsyncHTTPTransport(retries=RETRIES)
+    # No retries: respx-based tests cannot exercise retry behavior (mocking intercepts
+    # above the httpcore layer where retries run), and silent retries in production
+    # would double worst-case latency before surfacing as a 502. Single attempt with
+    # TIMEOUT_SECONDS timeout surfaces transport failures immediately.
     try:
-        async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS, transport=transport) as client:
+        async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
             response = await client.get(get_settings().open_meteo_url, params=params)
     except httpx.HTTPError as exc:
         logger.warning("Open-Meteo unreachable: %s", exc)
