@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 
 from app.errors import register_error_handlers
+from app.routes import weather
 
 
 def create_app() -> FastAPI:
@@ -13,6 +14,7 @@ def create_app() -> FastAPI:
     )
 
     register_error_handlers(app)
+    app.include_router(weather.router)
 
     @app.get("/health", tags=["meta"])
     async def health() -> dict:
