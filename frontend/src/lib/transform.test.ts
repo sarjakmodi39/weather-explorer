@@ -72,6 +72,14 @@ describe('paginate', () => {
   it('handles an empty input', () => {
     expect(paginate([], 1, 10)).toEqual([])
   })
+
+  it('returns nothing for page 0', () => {
+    expect(paginate(rows, 0, 10)).toEqual([])
+  })
+
+  it('returns nothing for negative page numbers', () => {
+    expect(paginate(rows, -1, 10)).toEqual([])
+  })
 })
 
 describe('pageCount', () => {
@@ -132,5 +140,36 @@ describe('validateInputs', () => {
     expect(
       validateInputs({ ...VALID, startDate: '2024-06-01', endDate: '2024-07-01' }),
     ).toBeNull()
+  })
+
+  it('rejects end date on the day after the injected "now"', () => {
+    // now is 2024-06-15 00:00:00 UTC
+    const now = new Date('2024-06-15')
+    const message = validateInputs(
+      { ...VALID, startDate: '2024-06-01', endDate: '2024-06-16' },
+      now,
+    )
+    expect(message).toContain('future')
+  })
+
+  it('accepts end date on the same UTC calendar day as injected "now"', () => {
+    // now is 2024-06-15 00:00:00 UTC; end is 2024-06-15
+    const now = new Date('2024-06-15')
+    const result = validateInputs(
+      { ...VALID, startDate: '2024-06-01', endDate: '2024-06-15' },
+      now,
+    )
+    expect(result).toBeNull()
+  })
+
+  it('accepts end date on the same UTC date when "now" is late in the day', () => {
+    // now is 2024-06-15 23:59:59 UTC; end is 2024-06-15
+    // This proves the comparison is calendar-date, not instant
+    const now = new Date('2024-06-15T23:59:59Z')
+    const result = validateInputs(
+      { ...VALID, startDate: '2024-06-01', endDate: '2024-06-15' },
+      now,
+    )
+    expect(result).toBeNull()
   })
 })

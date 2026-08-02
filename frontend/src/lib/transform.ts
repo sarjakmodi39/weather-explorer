@@ -30,6 +30,7 @@ export function toDailyRows(payload: WeatherPayload): DailyRow[] {
 }
 
 export function paginate<T>(rows: T[], page: number, pageSize: number): T[] {
+  if (page < 1) return []
   const start = (page - 1) * pageSize
   return rows.slice(start, start + pageSize)
 }
@@ -56,7 +57,7 @@ const MS_PER_DAY = 86_400_000
 
 /** Mirrors backend/app/schemas.py so obvious mistakes cost no round trip.
  *  The server stays the authority — this is a convenience, not a guarantee. */
-export function validateInputs(values: InputValues): string | null {
+export function validateInputs(values: InputValues, now: Date = new Date()): string | null {
   const latitude = Number(values.latitude)
   const longitude = Number(values.longitude)
 
@@ -90,7 +91,11 @@ export function validateInputs(values: InputValues): string | null {
   if (days > MAX_RANGE_DAYS) {
     return `Date range must not exceed ${MAX_RANGE_DAYS} days (requested ${days}).`
   }
-  if (end > new Date()) {
+
+  // Compare UTC calendar dates, not instants. Mirror backend's UTC evaluation.
+  const endDateString = end.toISOString().split('T')[0]
+  const todayString = now.toISOString().split('T')[0]
+  if (endDateString > todayString) {
     return 'End date must not be in the future.'
   }
 
