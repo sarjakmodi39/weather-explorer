@@ -11,6 +11,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 
+# Run as a non-root user rather than the container default of root.
+RUN groupadd --system app && useradd --system --gid app --home /app app \
+    && chown -R app:app /app
+USER app
+
 # Cloud Run injects PORT and expects the container to listen on it.
 ENV PORT=8080
 EXPOSE 8080
