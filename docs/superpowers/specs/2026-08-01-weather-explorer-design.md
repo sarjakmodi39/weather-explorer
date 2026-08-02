@@ -174,7 +174,7 @@ Deliberately excluded to keep the surface defensible: map-based location picking
 ## Assumptions
 
 1. "Range ≤ 31 days" means an inclusive day count of at most 31.
-2. "Full API JSON" means the response body stored byte-for-byte, unmodified.
+2. "Full API JSON" means the response body stored unmodified in content, without reshaping or field stripping (the stored bytes are `json.dumps` of the parsed body, so whitespace may differ from the wire response — the JSON value itself is identical).
 3. Date bounds beyond those listed in the brief (no future dates, nothing before 1940) are validated server-side, since Open-Meteo rejects them regardless.
 4. A malformed filename and a missing filename are indistinguishable in the response — both 404.
 5. Bucket contents stay small enough that unpaginated listing is appropriate; the `fields` mask keeps the single call cheap.
