@@ -3,12 +3,15 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
+from botocore import exceptions as boto_exceptions
 from google.api_core import exceptions as gcp_exceptions
 from google.auth import exceptions as gauth_exceptions
 
+from app import deps
+from app.config import get_settings
 from app.errors import AppError
 from app.services import storage as storage_module
-from app.services.storage import GCSStorage, InMemoryStorage
+from app.services.storage import GCSStorage, InMemoryStorage, S3Storage
 
 PAYLOAD = {"daily": {"time": ["2024-06-01"], "temperature_2m_max": [34.4]}}
 
@@ -221,3 +224,284 @@ def test_save_json_wraps_google_auth_error_as_app_error():
         storage.save_json("weather_a.json", PAYLOAD)
 
     assert exc_info.value.status_code == 502
+
+
+# --- S3Storage: fakes covering only what the code touches --------------------
+#
+# Same approach as the GCSStorage fakes above: a plain fake stands in for the
+# boto3 S3 client. No mocking framework, no patched globals, no network, no
+# credentials — S3Storage's real code runs against fake data and fake
+# failures instead of a mock's recorded expectations.
+
+
+class FakeS3Body:
+    """Stands in for botocore's StreamingBody, returned by get_object."""
+
+    def __init__(self, data: bytes) -> None:
+        self._data = data
+
+    def read(self) -> bytes:
+        return self._data
+
+
+class FakePaginator:
+    """Stands in for a boto3 Paginator. `pages` is exactly what paginate()
+    yields, so a test can assert S3Storage merges more than one page rather
+    than reading only the first (the 1000-key truncation this guards)."""
+
+    def __init__(self, pages: list[dict]) -> None:
+        self._pages = pages
+
+    def paginate(self, **kwargs):
+        return self._pages
+
+
+class FakeS3Client:
+    """Stands in for a boto3 S3 client. One bucket, keyed objects."""
+
+    def __init__(
+        self,
+        objects: dict[str, bytes] | None = None,
+        list_pages: list[dict] | None = None,
+        put_object_error: Exception | None = None,
+        get_object_error: Exception | None = None,
+        list_objects_error: Exception | None = None,
+    ) -> None:
+        self._objects = objects if objects is not None else {}
+        self._list_pages = list_pages if list_pages is not None else [{"Contents": []}]
+        self._put_object_error = put_object_error
+        self._get_object_error = get_object_error
+        self._list_objects_error = list_objects_error
+        self.put_object_calls: list[dict] = []
+
+    def put_object(self, **kwargs) -> None:
+        if self._put_object_error:
+            raise self._put_object_error
+        self.put_object_calls.append(kwargs)
+        self._objects[kwargs["Key"]] = kwargs["Body"]
+
+    def get_paginator(self, operation_name: str) -> FakePaginator:
+        assert operation_name == "list_objects_v2"
+        if self._list_objects_error:
+            raise self._list_objects_error
+        return FakePaginator(self._list_pages)
+
+    def get_object(self, Bucket: str, Key: str) -> dict:
+        if self._get_object_error:
+            raise self._get_object_error
+        if Key not in self._objects:
+            raise boto_exceptions.ClientError(
+                {"Error": {"Code": "NoSuchKey", "Message": "not found"}}, "GetObject"
+            )
+        return {"Body": FakeS3Body(self._objects[Key])}
+
+
+def test_s3_save_json_round_trips_with_json_content_type():
+    client = FakeS3Client()
+    storage = S3Storage("test-bucket", client=client)
+    payload = {"a": 1, "b": [1, 2, None], "nested": {"c": "keep"}}
+
+    storage.save_json("weather_a.json", payload)
+
+    [call] = client.put_object_calls
+    assert call["Bucket"] == "test-bucket"
+    assert call["Key"] == "weather_a.json"
+    assert json.loads(call["Body"]) == payload
+    assert call["ContentType"] == "application/json"
+
+
+def test_s3_list_files_maps_key_size_last_modified():
+    base = datetime(2026, 8, 1, tzinfo=timezone.utc)
+    client = FakeS3Client(
+        list_pages=[{"Contents": [{"Key": "weather_a.json", "Size": 42, "LastModified": base}]}]
+    )
+    storage = S3Storage("test-bucket", client=client)
+
+    [entry] = storage.list_files()
+
+    assert entry.name == "weather_a.json"
+    assert entry.size == 42
+    assert entry.created_at == base
+
+
+def test_s3_list_files_returns_newest_first_for_out_of_order_objects():
+    base = datetime(2026, 8, 1, tzinfo=timezone.utc)
+    client = FakeS3Client(
+        list_pages=[
+            {
+                "Contents": [
+                    {"Key": "older.json", "Size": 10, "LastModified": base},
+                    {
+                        "Key": "newest.json",
+                        "Size": 20,
+                        "LastModified": base + timedelta(hours=2),
+                    },
+                    {
+                        "Key": "middle.json",
+                        "Size": 15,
+                        "LastModified": base + timedelta(hours=1),
+                    },
+                ]
+            }
+        ]
+    )
+    storage = S3Storage("test-bucket", client=client)
+
+    result = storage.list_files()
+
+    assert [f.name for f in result] == ["newest.json", "middle.json", "older.json"]
+
+
+def test_s3_list_files_merges_multiple_pages():
+    """list_objects_v2 truncates at 1000 keys per call. S3Storage must drive
+    the paginator to completion, not read only the first page — this is the
+    regression guard for that cap."""
+    base = datetime(2026, 8, 1, tzinfo=timezone.utc)
+    client = FakeS3Client(
+        list_pages=[
+            {"Contents": [{"Key": "page1.json", "Size": 1, "LastModified": base}]},
+            {
+                "Contents": [
+                    {"Key": "page2.json", "Size": 2, "LastModified": base + timedelta(hours=1)}
+                ]
+            },
+        ]
+    )
+    storage = S3Storage("test-bucket", client=client)
+
+    result = storage.list_files()
+
+    assert {f.name for f in result} == {"page1.json", "page2.json"}
+
+
+def test_s3_list_files_on_empty_bucket_returns_nothing():
+    assert S3Storage("test-bucket", client=FakeS3Client()).list_files() == []
+
+
+def test_s3_get_json_returns_none_for_no_such_key():
+    client = FakeS3Client()
+    storage = S3Storage("test-bucket", client=client)
+
+    assert storage.get_json("missing.json") is None
+
+
+def test_s3_get_json_returns_none_for_404_coded_error():
+    """Supabase Storage is not AWS: S3-compatible implementations have been
+    observed returning a bare "404" error code for a missing object rather
+    than AWS's "NoSuchKey"."""
+    client = FakeS3Client(
+        get_object_error=boto_exceptions.ClientError(
+            {"Error": {"Code": "404", "Message": "not found"}}, "GetObject"
+        )
+    )
+    storage = S3Storage("test-bucket", client=client)
+
+    assert storage.get_json("missing.json") is None
+
+
+def test_s3_get_json_round_trips_a_stored_payload():
+    payload = {"daily": {"time": ["2024-06-01"], "temperature_2m_max": [34.4]}}
+    client = FakeS3Client(objects={"weather_a.json": json.dumps(payload).encode("utf-8")})
+    storage = S3Storage("test-bucket", client=client)
+
+    assert storage.get_json("weather_a.json") == payload
+
+
+def test_s3_no_credentials_error_surfaces_as_502_with_authentication_wording():
+    client = FakeS3Client(put_object_error=boto_exceptions.NoCredentialsError())
+    storage = S3Storage("test-bucket", client=client)
+
+    with pytest.raises(AppError) as exc_info:
+        storage.save_json("weather_a.json", PAYLOAD)
+
+    assert exc_info.value.status_code == 502
+    assert "authenticate" in exc_info.value.message
+
+
+def test_s3_partial_credentials_error_surfaces_as_502_with_authentication_wording():
+    client = FakeS3Client(
+        put_object_error=boto_exceptions.PartialCredentialsError(
+            provider="aws", cred_var="AWS_SECRET_ACCESS_KEY"
+        )
+    )
+    storage = S3Storage("test-bucket", client=client)
+
+    with pytest.raises(AppError) as exc_info:
+        storage.save_json("weather_a.json", PAYLOAD)
+
+    assert exc_info.value.status_code == 502
+    assert "authenticate" in exc_info.value.message
+
+
+def test_s3_generic_client_error_surfaces_as_502():
+    client = FakeS3Client(
+        put_object_error=boto_exceptions.ClientError(
+            {"Error": {"Code": "InternalError", "Message": "upstream failure"}}, "PutObject"
+        )
+    )
+    storage = S3Storage("test-bucket", client=client)
+
+    with pytest.raises(AppError) as exc_info:
+        storage.save_json("weather_a.json", PAYLOAD)
+
+    assert exc_info.value.status_code == 502
+
+
+def test_s3_empty_bucket_name_raises_on_first_use_not_construction():
+    """Regression guard for the dependency-ordering bug described in
+    GCSStorage: constructing S3Storage("") must not raise. Only the first
+    real call — list_files() here — should hit the empty-bucket check."""
+    storage = S3Storage("", client=FakeS3Client())  # must not raise
+
+    with pytest.raises(AppError) as exc_info:
+        storage.list_files()
+
+    assert exc_info.value.status_code == 500
+
+
+def test_s3_invalid_json_raises_500():
+    client = FakeS3Client(objects={"broken.json": b"not json"})
+    storage = S3Storage("test-bucket", client=client)
+
+    with pytest.raises(AppError) as exc_info:
+        storage.get_json("broken.json")
+
+    assert exc_info.value.status_code == 500
+
+
+# --- deps.get_storage(): backend selection -----------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _clear_storage_caches():
+    """get_settings and the two per-backend factories in app.deps are all
+    lru_cache'd for production (one client per process). Tests that flip
+    STORAGE_BACKEND via the environment need every cache cleared before and
+    after, or they will see a stale Settings/storage instance from whichever
+    test ran first."""
+    get_settings.cache_clear()
+    deps._gcs_storage.cache_clear()
+    deps._s3_storage.cache_clear()
+    yield
+    get_settings.cache_clear()
+    deps._gcs_storage.cache_clear()
+    deps._s3_storage.cache_clear()
+
+
+def test_get_storage_selects_gcs_by_default(monkeypatch):
+    monkeypatch.delenv("STORAGE_BACKEND", raising=False)
+
+    assert isinstance(deps.get_storage(), GCSStorage)
+
+
+def test_get_storage_selects_s3_when_configured(monkeypatch):
+    monkeypatch.setenv("STORAGE_BACKEND", "s3")
+
+    assert isinstance(deps.get_storage(), S3Storage)
+
+
+def test_get_storage_raises_for_unknown_backend(monkeypatch):
+    monkeypatch.setenv("STORAGE_BACKEND", "azure-blob")
+
+    with pytest.raises(AppError):
+        deps.get_storage()

@@ -11,6 +11,26 @@ class Settings(BaseSettings):
     # Name of the GCS bucket holding stored weather files.
     gcs_bucket: str = ""
 
+    # Which StorageClient implementation app.deps.get_storage() builds.
+    # "gcs" (default) or "s3". Anything else fails loudly at request time
+    # rather than silently falling back to a default.
+    storage_backend: str = "gcs"
+
+    # Name of the S3-compatible bucket holding stored weather files.
+    s3_bucket: str = ""
+
+    # Endpoint URL for a non-AWS S3-compatible provider (e.g. Supabase
+    # Storage's S3 endpoint). Left empty, boto3 talks to AWS itself.
+    s3_endpoint_url: str = ""
+
+    # Supabase Storage requires a region string even though it is not
+    # region-partitioned. Left empty, S3Storage falls back to "us-east-1".
+    s3_region: str = ""
+
+    # Access keys are read by boto3 directly from AWS_ACCESS_KEY_ID /
+    # AWS_SECRET_ACCESS_KEY — deliberately not modeled as Settings fields,
+    # so they are never logged or echoed alongside the rest of this object.
+
     # Comma-separated list of origins permitted by CORS.
     # Deliberately not "*" — see README.
     allowed_origins: str = "http://localhost:5173"
