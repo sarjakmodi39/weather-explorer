@@ -21,8 +21,10 @@ export function DataTable({ rows }: { rows: DailyRow[] }) {
     setPage((current) => clampPage(current, rows.length, pageSize))
   }, [rows.length, pageSize])
 
+  // Compute effective page synchronously to avoid empty-table flash.
+  const effectivePage = clampPage(page, rows.length, pageSize)
   const totalPages = pageCount(rows.length, pageSize)
-  const visible = paginate(rows, page, pageSize)
+  const visible = paginate(rows, effectivePage, pageSize)
 
   if (rows.length === 0) {
     return <p className="py-8 text-center text-sm text-slate-500">Nothing to tabulate.</p>
@@ -85,18 +87,18 @@ export function DataTable({ rows }: { rows: DailyRow[] }) {
           <button
             type="button"
             onClick={() => setPage((current) => Math.max(1, current - 1))}
-            disabled={page === 1}
+            disabled={effectivePage === 1}
             className="rounded-md border border-slate-300 px-3 py-1 disabled:opacity-40"
           >
             Previous
           </button>
           <span className="text-slate-600">
-            Page {page} of {totalPages}
+            Page {effectivePage} of {totalPages}
           </span>
           <button
             type="button"
             onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-            disabled={page === totalPages}
+            disabled={effectivePage === totalPages}
             className="rounded-md border border-slate-300 px-3 py-1 disabled:opacity-40"
           >
             Next
