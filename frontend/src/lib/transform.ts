@@ -52,7 +52,7 @@ export interface InputValues {
   endDate: string
 }
 
-const MAX_RANGE_DAYS = 31
+export const MAX_RANGE_DAYS = 31
 const MS_PER_DAY = 86_400_000
 
 /** Mirrors backend/app/schemas.py so obvious mistakes cost no round trip.

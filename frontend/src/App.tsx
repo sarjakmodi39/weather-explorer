@@ -23,19 +23,27 @@ export default function App() {
   // newer selection has started by then, this one's result is discarded.
   const selectionToken = useRef(0)
 
-  const listing = useAsync(listWeatherFiles)
-  const content = useAsync(getWeatherFileContent)
+  const {
+    run: runListing,
+    loading: listLoading,
+    error: listError,
+  } = useAsync(listWeatherFiles)
+  const {
+    run: runContent,
+    loading: contentLoading,
+    error: contentError,
+  } = useAsync(getWeatherFileContent)
 
+  // `run` is referentially stable (useCallback over a module-level import),
+  // so this memoization is real and the effect's dependency array is honest.
   const refreshFiles = useCallback(async () => {
-    const result = await listing.run()
+    const result = await runListing()
     if (result) setFiles(result)
-  }, [listing])
+  }, [runListing])
 
   useEffect(() => {
     void refreshFiles()
-    // Run once on mount. refreshFiles is stable enough for this purpose and
-    // re-running on its identity would loop.
-  }, [])
+  }, [refreshFiles])
 
   const selectFile = useCallback(
     async (name: string) => {
@@ -48,7 +56,7 @@ export default function App() {
       }
 
       const token = ++selectionToken.current
-      const result = await content.run(name)
+      const result = await runContent(name)
 
       // Cache whatever came back — the data is still valid for this
       // filename even if a newer selection has since superseded it.
@@ -62,7 +70,7 @@ export default function App() {
 
       setPayload(result ?? null)
     },
-    [content],
+    [runContent],
   )
 
   // Chart and table are derived from the loaded payload — never a second copy.
@@ -91,8 +99,8 @@ export default function App() {
             />
             <FileList
               files={files}
-              loading={listing.loading}
-              error={listing.error}
+              loading={listLoading}
+              error={listError}
               selectedName={selectedName}
               onSelect={(name) => void selectFile(name)}
               onRefresh={() => void refreshFiles()}
@@ -102,20 +110,20 @@ export default function App() {
           <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <h2 className="mb-3 text-lg font-semibold text-slate-800">Visualization</h2>
 
-            {content.error && <StatusBanner kind="error" message={content.error} />}
+            {contentError && <StatusBanner kind="error" message={contentError} />}
 
-            {content.loading && (
+            {contentLoading && (
               <p className="py-12 text-center text-sm text-slate-500">Loading file…</p>
             )}
 
-            {!content.loading && !payload && !content.error && (
+            {!contentLoading && !payload && !contentError && (
               <StatusBanner
                 kind="info"
                 message="Select a stored file to see its chart and table."
               />
             )}
 
-            {!content.loading && payload && (
+            {!contentLoading && payload && (
               <div className="space-y-5">
                 <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                   <Metadata label="Latitude" value={payload.latitude?.toFixed(4) ?? '—'} />

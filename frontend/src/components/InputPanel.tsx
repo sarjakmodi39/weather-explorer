@@ -2,7 +2,7 @@ import { useState, type ChangeEvent, type FormEvent } from 'react'
 
 import { storeWeatherData } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
-import { validateInputs, type InputValues } from '../lib/transform'
+import { MAX_RANGE_DAYS, validateInputs, type InputValues } from '../lib/transform'
 import { StatusBanner } from './StatusBanner'
 
 const PRESETS = [
@@ -13,10 +13,11 @@ const PRESETS = [
 ]
 
 /** Default to a fully-available 7-day window: Open-Meteo's archive lags
- *  roughly two days, so we end three days back and stay clear of it. */
+ *  roughly two days, so we end four days back to keep margin for users at
+ *  UTC+13/+14, who would otherwise land exactly on the boundary. */
 function defaultRange() {
   const end = new Date()
-  end.setDate(end.getDate() - 3)
+  end.setDate(end.getDate() - 4)
   const start = new Date(end)
   start.setDate(start.getDate() - 6)
   const formatDate = (d: Date) => {
@@ -137,7 +138,7 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
           {store.loading ? 'Fetching…' : 'Fetch & store data'}
         </button>
 
-        <p className="text-xs text-slate-500">Maximum range is 31 days.</p>
+        <p className="text-xs text-slate-500">Maximum range is {MAX_RANGE_DAYS} days.</p>
 
         {localError && <StatusBanner kind="error" message={localError} />}
         {store.error && <StatusBanner kind="error" message={store.error} />}
