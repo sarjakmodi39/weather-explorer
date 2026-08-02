@@ -18,6 +18,11 @@ export default function App() {
   // Loaded files are cached by name, so re-clicking one costs no request.
   const cache = useRef(new Map<string, WeatherPayload>())
 
+  // Guards against a stale response committing over a newer selection: bumped
+  // on every selectFile call, and checked after the await resolves. If a
+  // newer selection has started by then, this one's result is discarded.
+  const selectionToken = useRef(0)
+
   const listing = useAsync(listWeatherFiles)
   const content = useAsync(getWeatherFileContent)
 
@@ -42,13 +47,20 @@ export default function App() {
         return
       }
 
+      const token = ++selectionToken.current
       const result = await content.run(name)
+
+      // Cache whatever came back — the data is still valid for this
+      // filename even if a newer selection has since superseded it.
       if (result) {
         cache.current.set(name, result)
-        setPayload(result)
-      } else {
-        setPayload(null)
       }
+
+      // A newer selection started while this one was in flight; let it win
+      // and leave the current state alone.
+      if (token !== selectionToken.current) return
+
+      setPayload(result ?? null)
     },
     [content],
   )
