@@ -2,7 +2,21 @@
 
 from functools import lru_cache
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Export .env into the real process environment before anything reads it.
+#
+# pydantic-settings parses .env into Settings but does not export to
+# os.environ, and the cloud SDKs bypass Settings entirely: boto3 reads
+# AWS_ACCESS_KEY_ID itself, and google-cloud-storage reads
+# STORAGE_EMULATOR_HOST itself. Without this, those keys look configured in
+# .env but silently do nothing — which cost real debugging time once.
+#
+# No-op in production, where config arrives as real environment variables and
+# no .env file exists. `override=False` keeps genuine environment variables
+# authoritative over a stray local file.
+load_dotenv(override=False)
 
 
 class Settings(BaseSettings):
