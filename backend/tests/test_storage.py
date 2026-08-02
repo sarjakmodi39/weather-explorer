@@ -7,6 +7,7 @@ from google.api_core import exceptions as gcp_exceptions
 from google.auth import exceptions as gauth_exceptions
 
 from app.errors import AppError
+from app.services import storage as storage_module
 from app.services.storage import GCSStorage, InMemoryStorage
 
 PAYLOAD = {"daily": {"time": ["2024-06-01"], "temperature_2m_max": [34.4]}}
@@ -184,6 +185,25 @@ def test_save_json_wraps_google_api_error_as_app_error():
 
     with pytest.raises(AppError) as exc_info:
         storage.save_json("weather_a.json", PAYLOAD)
+
+    assert exc_info.value.status_code == 502
+
+
+def test_client_construction_environment_error_maps_to_app_error(monkeypatch):
+    """gcs.Client() raises a bare EnvironmentError (not a GoogleAuthError)
+    when no project can be determined from the environment. Regression test:
+    this must map to a controlled 502, not escape as an opaque 500."""
+
+    def _raise():
+        raise EnvironmentError(
+            "Project was not passed and could not be determined from the environment."
+        )
+
+    monkeypatch.setattr(storage_module.gcs, "Client", _raise)
+    storage = GCSStorage("test-bucket")
+
+    with pytest.raises(AppError) as exc_info:
+        storage.list_files()
 
     assert exc_info.value.status_code == 502
 

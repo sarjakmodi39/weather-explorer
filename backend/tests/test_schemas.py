@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from pydantic import ValidationError
@@ -69,13 +69,16 @@ def test_rejects_32_inclusive_days():
 def test_rejects_future_end_date():
     # Isolated from the range rule: validators short-circuit on first failure,
     # so both dates must sit in the future and be close together.
-    future = date.today() + timedelta(days=365)
+    # The schema evaluates "today" as datetime.now(timezone.utc).date(), so
+    # the test's expectations are built from the same clock rather than
+    # date.today() (local time), which would drift from it near midnight UTC.
+    future = datetime.now(timezone.utc).date() + timedelta(days=365)
     with pytest.raises(ValidationError, match="future"):
         build(start_date=str(future), end_date=str(future + timedelta(days=3)))
 
 
 def test_accepts_today_as_end_date():
-    today = date.today()
+    today = datetime.now(timezone.utc).date()
     build(start_date=str(today - timedelta(days=3)), end_date=str(today))
 
 

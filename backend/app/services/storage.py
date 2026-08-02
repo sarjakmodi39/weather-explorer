@@ -83,7 +83,13 @@ class GCSStorage:
             else:
                 try:
                     self._client_cache = gcs.Client()
-                except gauth_exceptions.GoogleAuthError as exc:
+                except (gauth_exceptions.GoogleAuthError, EnvironmentError) as exc:
+                    # gcs.Client() raises a bare EnvironmentError (not a
+                    # GoogleAuthError) when no project can be determined from
+                    # the environment — e.g. "Project was not passed and
+                    # could not be determined from the environment." Caught
+                    # alongside GoogleAuthError so it maps to the same 502
+                    # instead of escaping as an opaque 500.
                     raise AppError(
                         f"could not authenticate with storage: {exc}", status_code=502
                     ) from exc

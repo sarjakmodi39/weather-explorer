@@ -53,6 +53,12 @@ async def list_weather_files(
     return ListFilesResponse(files=storage.list_files())
 
 
+# `{file:path}` rather than the brief's plain `{file}`: a single-segment
+# converter matches against the *decoded* path, so a traversal string like
+# "../../etc/passwd" would fail to match this route and fall through to
+# Starlette's generic 404 ("Not Found", capital N) instead of the "not found"
+# below — failing our own hostile-input test. The `:path` converter matches
+# it here so is_valid_object_name() gets a chance to reject it.
 @router.get("/weather-file-content/{file:path}")
 async def weather_file_content(
     file: str,

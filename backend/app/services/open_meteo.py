@@ -63,7 +63,7 @@ async def fetch_daily_history(
         reason = _reason(response) or "Open-Meteo rejected the request"
         raise AppError(reason, status_code=400)
 
-    if response.status_code >= 500 or response.status_code != 200:
+    if response.status_code != 200:
         raise AppError(
             f"Open-Meteo returned an unexpected status {response.status_code}",
             status_code=502,

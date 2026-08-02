@@ -4,7 +4,7 @@ Validation lives here as declarative schema rather than scattered `if`
 statements in the route, so the rules are readable in one place.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -34,7 +34,7 @@ class StoreWeatherRequest(BaseModel):
                 f"date range must not exceed {MAX_RANGE_DAYS} days (requested {span})"
             )
 
-        if self.end_date > date.today():
+        if self.end_date > datetime.now(timezone.utc).date():
             raise ValueError("end_date must not be in the future")
 
         if self.start_date < EARLIEST_DATE:
