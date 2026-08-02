@@ -19,8 +19,13 @@ function defaultRange() {
   end.setDate(end.getDate() - 3)
   const start = new Date(end)
   start.setDate(start.getDate() - 6)
-  const iso = (d: Date) => d.toISOString().slice(0, 10)
-  return { startDate: iso(start), endDate: iso(end) }
+  const formatDate = (d: Date) => {
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const date = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${date}`
+  }
+  return { startDate: formatDate(start), endDate: formatDate(end) }
 }
 
 const FIELD =
@@ -51,7 +56,10 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
     // Catch the obvious mistakes here so they cost no round trip.
     const problem = validateInputs(values)
     setLocalError(problem)
-    if (problem) return
+    if (problem) {
+      store.reset()
+      return
+    }
 
     const result = await store.run({
       latitude: Number(values.latitude),

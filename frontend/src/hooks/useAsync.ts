@@ -29,5 +29,9 @@ export function useAsync<Args extends unknown[], T>(
     [action],
   )
 
-  return { run, loading, error }
+  const reset = useCallback(() => {
+    setError(null)
+  }, [])
+
+  return { run, loading, error, reset }
 }
