@@ -5,8 +5,10 @@ import {
   formatCityLabel,
   pageCount,
   paginate,
+  summarizeRows,
   toDailyRows,
   validateInputs,
+  type DailyRow,
 } from './transform'
 import type { GeocodeResult, WeatherPayload } from '../types'
 
@@ -172,6 +174,57 @@ describe('validateInputs', () => {
       now,
     )
     expect(result).toBeNull()
+  })
+})
+
+describe('summarizeRows', () => {
+  const ROW = (date: string, tempMax: number | null, tempMin: number | null): DailyRow => ({
+    date,
+    tempMax,
+    tempMin,
+    feelsMax: null,
+    feelsMin: null,
+  })
+
+  it('finds the warmest and coldest day and the average swing over normal data', () => {
+    const rows = [ROW('2024-06-01', 30, 20), ROW('2024-06-02', 34, 22), ROW('2024-06-03', 28, 18)]
+
+    const summary = summarizeRows(rows)
+
+    expect(summary.warmest).toEqual({ value: 34, date: '2024-06-02' })
+    expect(summary.coldest).toEqual({ value: 18, date: '2024-06-03' })
+    // swings: 10, 12, 10 -> mean 32/3
+    expect(summary.avgSwing).toBeCloseTo(32 / 3)
+  })
+
+  it('returns nulls for every figure when every reading is null', () => {
+    const rows = [ROW('2024-06-01', null, null), ROW('2024-06-02', null, null)]
+
+    expect(summarizeRows(rows)).toEqual({ warmest: null, coldest: null, avgSwing: null })
+  })
+
+  it('treats a single row as both the warmest and coldest day', () => {
+    const rows = [ROW('2024-06-01', 30, 20)]
+
+    const summary = summarizeRows(rows)
+
+    expect(summary.warmest).toEqual({ value: 30, date: '2024-06-01' })
+    expect(summary.coldest).toEqual({ value: 20, date: '2024-06-01' })
+    expect(summary.avgSwing).toBe(10)
+  })
+
+  it('returns all nulls for an empty array', () => {
+    expect(summarizeRows([])).toEqual({ warmest: null, coldest: null, avgSwing: null })
+  })
+
+  it('excludes a day from the swing average when only one of its readings is null', () => {
+    const rows = [ROW('2024-06-01', 30, 20), ROW('2024-06-02', 34, null)]
+
+    const summary = summarizeRows(rows)
+
+    expect(summary.warmest).toEqual({ value: 34, date: '2024-06-02' })
+    expect(summary.coldest).toEqual({ value: 20, date: '2024-06-01' })
+    expect(summary.avgSwing).toBe(10)
   })
 })
 

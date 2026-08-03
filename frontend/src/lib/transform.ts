@@ -29,6 +29,49 @@ export function toDailyRows(payload: WeatherPayload): DailyRow[] {
   }))
 }
 
+export interface DailyExtreme {
+  value: number
+  date: string
+}
+
+export interface RowsSummary {
+  /** The single hottest max-temperature reading, or null if every row's max is null. */
+  warmest: DailyExtreme | null
+  /** The single coldest min-temperature reading, or null if every row's min is null. */
+  coldest: DailyExtreme | null
+  /** Mean of (max - min) across days where both readings exist, or null if none do. */
+  avgSwing: number | null
+}
+
+/** Derives the headline numbers for the stat tiles from the loaded rows.
+ *  Pure and null-safe: a row missing a reading is simply excluded from that
+ *  particular figure rather than poisoning the whole summary. */
+export function summarizeRows(rows: DailyRow[]): RowsSummary {
+  let warmest: DailyExtreme | null = null
+  let coldest: DailyExtreme | null = null
+  let swingTotal = 0
+  let swingCount = 0
+
+  for (const row of rows) {
+    if (row.tempMax !== null && (warmest === null || row.tempMax > warmest.value)) {
+      warmest = { value: row.tempMax, date: row.date }
+    }
+    if (row.tempMin !== null && (coldest === null || row.tempMin < coldest.value)) {
+      coldest = { value: row.tempMin, date: row.date }
+    }
+    if (row.tempMax !== null && row.tempMin !== null) {
+      swingTotal += row.tempMax - row.tempMin
+      swingCount += 1
+    }
+  }
+
+  return {
+    warmest,
+    coldest,
+    avgSwing: swingCount > 0 ? swingTotal / swingCount : null,
+  }
+}
+
 export function paginate<T>(rows: T[], page: number, pageSize: number): T[] {
   if (page < 1) return []
   const start = (page - 1) * pageSize

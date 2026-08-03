@@ -4,13 +4,17 @@ import { getWeatherFileContent, listWeatherFiles } from './api/client'
 import { DataTable } from './components/DataTable'
 import { FileList } from './components/FileList'
 import { InputPanel } from './components/InputPanel'
+import { StatTile } from './components/StatTile'
 import { StatusBanner } from './components/StatusBanner'
 import { TempChart } from './components/TempChart'
+import { ThemeToggle } from './components/ThemeToggle'
 import { useAsync } from './hooks/useAsync'
-import { toDailyRows } from './lib/transform'
+import { useTheme } from './hooks/useTheme'
+import { summarizeRows, toDailyRows } from './lib/transform'
 import type { StoredFileMeta, WeatherPayload } from './types'
 
 export default function App() {
+  const { theme, toggleTheme, colors } = useTheme()
   const [files, setFiles] = useState<StoredFileMeta[]>([])
   const [selectedName, setSelectedName] = useState<string | null>(null)
   const [payload, setPayload] = useState<WeatherPayload | null>(null)
@@ -75,17 +79,23 @@ export default function App() {
 
   // Chart and table are derived from the loaded payload — never a second copy.
   const rows = useMemo(() => (payload ? toDailyRows(payload) : []), [payload])
+  const summary = useMemo(() => summarizeRows(rows), [rows])
 
   const selectedMeta = files.find((file) => file.name === selectedName)
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-          <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Weather Explorer</h1>
-          <p className="mt-0.5 text-sm text-slate-500">
-            Historical daily weather from Open-Meteo, stored in cloud object storage.
-          </p>
+    <div className="min-h-screen bg-[var(--surface-page)]">
+      <header className="border-b border-[var(--grid-line)] bg-[var(--surface-card)]">
+        <div className="mx-auto flex max-w-7xl items-start justify-between gap-4 px-4 py-4 sm:px-6">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-[var(--ink-primary)] sm:text-2xl">
+              Weather Explorer
+            </h1>
+            <p className="mt-0.5 text-sm text-[var(--ink-secondary)]">
+              Historical daily weather from Open-Meteo, stored in cloud object storage.
+            </p>
+          </div>
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
         </div>
       </header>
 
@@ -107,13 +117,13 @@ export default function App() {
             />
           </div>
 
-          <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="mb-3 text-lg font-semibold text-slate-800">Visualization</h2>
+          <section className="rounded-lg border border-[var(--grid-line)] bg-[var(--surface-card)] p-4 shadow-sm sm:p-5">
+            <h2 className="mb-4 text-lg font-semibold text-[var(--ink-primary)]">Visualization</h2>
 
             {contentError && <StatusBanner kind="error" message={contentError} />}
 
             {contentLoading && (
-              <p className="py-12 text-center text-sm text-slate-500">Loading file…</p>
+              <p className="py-12 text-center text-sm text-[var(--ink-muted)]">Loading file…</p>
             )}
 
             {!contentLoading && !payload && !contentError && (
@@ -124,21 +134,50 @@ export default function App() {
             )}
 
             {!contentLoading && payload && (
-              <div className="space-y-5">
-                <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-                  <Metadata label="Latitude" value={payload.latitude?.toFixed(4) ?? '—'} />
-                  <Metadata label="Longitude" value={payload.longitude?.toFixed(4) ?? '—'} />
-                  <Metadata label="Timezone" value={payload.timezone ?? '—'} />
-                  <Metadata label="Days" value={String(rows.length)} />
-                </dl>
+              <div className="space-y-6">
+                <div>
+                  <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                    <Metadata label="Latitude" value={payload.latitude?.toFixed(4) ?? '—'} />
+                    <Metadata label="Longitude" value={payload.longitude?.toFixed(4) ?? '—'} />
+                    <Metadata label="Timezone" value={payload.timezone ?? '—'} />
+                    <Metadata label="Days" value={String(rows.length)} />
+                  </dl>
+                  {selectedMeta && (
+                    <p
+                      className="mt-2 truncate rounded-md bg-[var(--surface-page)] px-2 py-1 font-mono text-xs text-[var(--ink-muted)]"
+                      title={selectedMeta.name}
+                    >
+                      {selectedMeta.name}
+                    </p>
+                  )}
+                </div>
 
-                {selectedMeta && (
-                  <p className="truncate font-mono text-xs text-slate-500">
-                    {selectedMeta.name}
-                  </p>
-                )}
+                <div>
+                  <h3 className="mb-2 text-sm font-semibold tracking-wide text-[var(--ink-secondary)] uppercase">
+                    Overview
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <StatTile
+                      label="Warmest day"
+                      value={summary.warmest ? `${summary.warmest.value}°C` : '—'}
+                      sublabel={summary.warmest?.date}
+                      accent={colors.seriesMax}
+                    />
+                    <StatTile
+                      label="Coldest day"
+                      value={summary.coldest ? `${summary.coldest.value}°C` : '—'}
+                      sublabel={summary.coldest?.date}
+                      accent={colors.seriesMin}
+                    />
+                    <StatTile
+                      label="Average daily swing"
+                      value={summary.avgSwing !== null ? `${summary.avgSwing.toFixed(1)}°C` : '—'}
+                      sublabel="mean of max − min"
+                    />
+                  </div>
+                </div>
 
-                <TempChart rows={rows} />
+                <TempChart rows={rows} colors={colors} />
                 <DataTable rows={rows} />
               </div>
             )}
@@ -151,9 +190,9 @@ export default function App() {
 
 function Metadata({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md bg-slate-50 px-3 py-2">
-      <dt className="text-xs text-slate-500">{label}</dt>
-      <dd className="font-medium text-slate-800">{value}</dd>
+    <div className="rounded-md bg-[var(--surface-page)] px-3 py-2">
+      <dt className="text-xs text-[var(--ink-muted)]">{label}</dt>
+      <dd className="font-medium text-[var(--ink-secondary)]">{value}</dd>
     </div>
   )
 }

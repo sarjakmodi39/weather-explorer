@@ -36,8 +36,8 @@ function defaultRange() {
 }
 
 const FIELD =
-  'w-full rounded-md border border-slate-300 px-3 py-2 text-sm ' +
-  'focus:border-sky-500 focus:outline-none focus:ring-1 focus:ring-sky-500'
+  'w-full rounded-md border border-[var(--axis-line)] bg-[var(--surface-card)] px-3 py-2 text-sm ' +
+  'text-[var(--ink-primary)] focus:border-[var(--accent)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]'
 
 export function InputPanel({ onStored }: { onStored: (filename: string) => void }) {
   const [values, setValues] = useState<InputValues>({
@@ -51,6 +51,11 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
   const [cityQuery, setCityQuery] = useState('')
   const [cityResults, setCityResults] = useState<GeocodeResult[] | null>(null)
   const [cityNoMatch, setCityNoMatch] = useState(false)
+  // Tracks the exact query text that was last turned into applied
+  // coordinates, so an edited-but-unsearched box can be flagged below —
+  // otherwise a typed city that's never searched silently leaves whatever
+  // coordinates were already in the fields to be submitted instead.
+  const [appliedCityQuery, setAppliedCityQuery] = useState<string | null>(null)
 
   const store = useAsync(storeWeatherData)
   const citySearch = useAsync(searchCities)
@@ -78,6 +83,7 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
       latitude: result.latitude.toFixed(4),
       longitude: result.longitude.toFixed(4),
     }))
+    setAppliedCityQuery(cityQuery)
     clearCityFeedback()
   }
 
@@ -140,13 +146,21 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
     }
   }
 
+  // True while the box holds text that hasn't been turned into applied
+  // coordinates — the cue for the unapplied-city trap (type a city, never
+  // press Search, hit Fetch & store, and silently get stale coordinates).
+  const cityUnapplied =
+    cityQuery.trim().length > 0 && cityQuery.trim() !== appliedCityQuery?.trim()
+
+  const LABEL = 'mb-1 block text-sm font-medium text-[var(--ink-secondary)]'
+
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-3 text-lg font-semibold text-slate-800">Fetch &amp; store</h2>
+    <section className="rounded-lg border border-[var(--grid-line)] bg-[var(--surface-card)] p-4 shadow-sm sm:p-5">
+      <h2 className="mb-4 text-lg font-semibold text-[var(--ink-primary)]">Fetch &amp; store</h2>
 
       <form onSubmit={submit} className="space-y-3">
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-600">Search for a city</span>
+          <span className={LABEL}>Search for a city</span>
           <div className="flex flex-wrap gap-2">
             <input
               className={`${FIELD} min-w-0 flex-1`}
@@ -165,21 +179,28 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
               type="button"
               onClick={() => void runCitySearch()}
               disabled={citySearch.loading || cityQuery.trim().length < 2}
-              className="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+              className="shrink-0 rounded-md border border-[var(--axis-line)] px-3 py-2 text-sm font-medium text-[var(--ink-secondary)] hover:bg-[var(--surface-page)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {citySearch.loading ? 'Searching…' : 'Search'}
             </button>
           </div>
         </label>
 
+        {cityUnapplied && (
+          <p className="text-xs text-[var(--ink-muted)]">
+            &ldquo;{cityQuery.trim()}&rdquo; hasn&rsquo;t been applied — the coordinates below
+            are what will be used. Press Search to look it up.
+          </p>
+        )}
+
         {cityResults && (
-          <ul className="space-y-1 rounded-md border border-slate-200 bg-slate-50 p-2">
+          <ul className="space-y-1 rounded-md border border-[var(--grid-line)] bg-[var(--surface-page)] p-2">
             {cityResults.map((result, index) => (
               <li key={`${result.latitude},${result.longitude},${index}`}>
                 <button
                   type="button"
                   onClick={() => applyCity(result)}
-                  className="w-full rounded-md px-2 py-1 text-left text-sm text-slate-700 hover:bg-slate-200"
+                  className="w-full rounded-md px-2 py-1 text-left text-sm text-[var(--ink-secondary)] hover:bg-[var(--surface-card)]"
                 >
                   {formatCityLabel(result)}
                 </button>
@@ -193,7 +214,7 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-600">Latitude</span>
+            <span className={LABEL}>Latitude</span>
             <input
               className={FIELD}
               value={values.latitude}
@@ -203,7 +224,7 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-600">Longitude</span>
+            <span className={LABEL}>Longitude</span>
             <input
               className={FIELD}
               value={values.longitude}
@@ -213,11 +234,11 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
             />
           </label>
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-600">Start date</span>
+            <span className={LABEL}>Start date</span>
             <input className={FIELD} type="date" value={values.startDate} onChange={set('startDate')} />
           </label>
           <label className="block">
-            <span className="mb-1 block text-sm font-medium text-slate-600">End date</span>
+            <span className={LABEL}>End date</span>
             <input className={FIELD} type="date" value={values.endDate} onChange={set('endDate')} />
           </label>
         </div>
@@ -234,7 +255,7 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
                   longitude: preset.longitude,
                 }))
               }
-              className="rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-600 hover:bg-slate-100"
+              className="rounded-full border border-[var(--axis-line)] px-3 py-1 text-xs text-[var(--ink-secondary)] hover:bg-[var(--surface-page)]"
             >
               {preset.label}
             </button>
@@ -244,12 +265,12 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
         <button
           type="submit"
           disabled={store.loading}
-          className="w-full rounded-md bg-sky-600 px-4 py-2 text-sm font-medium text-white hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-400 sm:w-auto"
+          className="w-full rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--accent-contrast)] transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           {store.loading ? 'Fetching…' : 'Fetch & store data'}
         </button>
 
-        <p className="text-xs text-slate-500">Maximum range is {MAX_RANGE_DAYS} days.</p>
+        <p className="text-xs text-[var(--ink-muted)]">Maximum range is {MAX_RANGE_DAYS} days.</p>
 
         {localError && <StatusBanner kind="error" message={localError} />}
         {store.error && <StatusBanner kind="error" message={store.error} />}

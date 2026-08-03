@@ -1,1 +1,115 @@
 @import "tailwindcss";
+
+/* Design tokens. Chart-chrome and series values here must stay byte-for-byte
+ * identical to src/lib/theme.ts (CHART_COLORS) — Recharts takes colors as
+ * props, not CSS, so that file is the JS mirror of these custom properties.
+ * The series hexes are validated for colorblind safety; do not edit them
+ * without updating both places. */
+:root {
+  --surface-card: #fcfcfb;
+  --surface-page: #f9f9f7;
+  --ink-primary: #0b0b0b;
+  --ink-secondary: #52514e;
+  --ink-muted: #898781;
+  --grid-line: #e1e0d9;
+  --axis-line: #c3c2b7;
+
+  --series-max: #dc2626;
+  --series-min: #2563eb;
+  --series-feels-max: #f97316;
+  --series-feels-min: #0891b2;
+
+  /* Interactive accent — not part of the validated series palette, chosen to
+   * stay visually distinct from the chart's blue/orange series. */
+  --accent: #4338ca;
+  --accent-hover: #3730a3;
+  --accent-soft: #eef2ff;
+  --accent-soft-border: #c7d2fe;
+  --accent-contrast: #ffffff;
+
+  --status-error-bg: #fef2f2;
+  --status-error-text: #991b1b;
+  --status-error-border: #fecaca;
+  --status-success-bg: #ecfdf5;
+  --status-success-text: #065f46;
+  --status-success-border: #a7f3d0;
+  --status-info-bg: #f4f4f2;
+  --status-info-text: #52514e;
+  --status-info-border: #e1e0d9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    --surface-card: #1a1a19;
+    --surface-page: #0d0d0d;
+    --ink-primary: #ffffff;
+    --ink-secondary: #c3c2b7;
+    --ink-muted: #898781;
+    --grid-line: #2c2c2a;
+    --axis-line: #383835;
+
+    --series-max: #e66767;
+    --series-min: #3987e5;
+    --series-feels-max: #d95926;
+    --series-feels-min: #0891b2;
+
+    --accent: #818cf8;
+    --accent-hover: #a5b4fc;
+    --accent-soft: #1e1b4b;
+    --accent-soft-border: #3730a3;
+    --accent-contrast: #0b0b0b;
+
+    --status-error-bg: #3f1d1d;
+    --status-error-text: #fca5a5;
+    --status-error-border: #7f1d1d;
+    --status-success-bg: #052e2b;
+    --status-success-text: #6ee7b7;
+    --status-success-border: #065f46;
+    --status-info-bg: #1f1f1d;
+    --status-info-text: #c3c2b7;
+    --status-info-border: #2c2c2a;
+  }
+}
+
+:root[data-theme="dark"] {
+  --surface-card: #1a1a19;
+  --surface-page: #0d0d0d;
+  --ink-primary: #ffffff;
+  --ink-secondary: #c3c2b7;
+  --ink-muted: #898781;
+  --grid-line: #2c2c2a;
+  --axis-line: #383835;
+
+  --series-max: #e66767;
+  --series-min: #3987e5;
+  --series-feels-max: #d95926;
+  --series-feels-min: #0891b2;
+
+  --accent: #818cf8;
+  --accent-hover: #a5b4fc;
+  --accent-soft: #1e1b4b;
+  --accent-soft-border: #3730a3;
+  --accent-contrast: #0b0b0b;
+
+  --status-error-bg: #3f1d1d;
+  --status-error-text: #fca5a5;
+  --status-error-border: #7f1d1d;
+  --status-success-bg: #052e2b;
+  --status-success-text: #6ee7b7;
+  --status-success-border: #065f46;
+  --status-info-bg: #1f1f1d;
+  --status-info-text: #c3c2b7;
+  --status-info-border: #2c2c2a;
+}
+
+body {
+  background-color: var(--surface-page);
+  color: var(--ink-primary);
+}
+
+/* Axis and legend text render as SVG <text>, out of Tailwind's reach —
+ * tabular figures belong here (table columns and axis ticks), never on
+ * large standalone numbers. */
+.recharts-cartesian-axis-tick text {
+  font-variant-numeric: tabular-nums;
+}
