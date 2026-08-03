@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   clampPage,
   dayRangeGeometry,
+  defaultRange,
   formatCityLabel,
   pageCount,
   paginate,
@@ -175,6 +176,77 @@ describe('validateInputs', () => {
       now,
     )
     expect(result).toBeNull()
+  })
+})
+
+describe('defaultRange', () => {
+  // The default range must always satisfy validateInputs against the same
+  // clock it was built from — otherwise the form shows an error on first
+  // render with nothing typed. This is the exact bug: defaultRange() used
+  // to read local calendar components while validateInputs compares UTC
+  // ones, so between local midnight and the UTC day rollover (00:00-05:30
+  // IST, for example) the local "today" was already one calendar day ahead
+  // of the UTC "today" the validator checks against.
+  const INSTANTS: [string, string][] = [
+    // The exact failing case: 00:48 IST on 2026-08-04 is still 2026-08-03
+    // in UTC. Any machine set to a positive-offset timezone reproduces the
+    // original bug at this instant; this instant reproduces it regardless
+    // of the machine's timezone because both functions read UTC explicitly.
+    ['local/UTC calendar dates differ (late-UTC-day instant)', '2026-08-03T19:18:00Z'],
+    // A UTC instant early in the day.
+    ['UTC instant early in the day', '2026-08-03T00:05:00Z'],
+    // Month boundary: UTC 1st of a month, so start crosses into the
+    // previous month.
+    ['month boundary', '2026-09-01T12:00:00Z'],
+    // Year boundary: UTC 1 January, so start crosses into the previous year.
+    ['year boundary', '2026-01-01T12:00:00Z'],
+  ]
+
+  it.each(INSTANTS)('produces a range validateInputs accepts: %s (%s)', (_label, iso) => {
+    const now = new Date(iso)
+    const range = defaultRange(now)
+
+    expect(
+      validateInputs({ latitude: '19.0760', longitude: '72.8777', ...range }, now),
+    ).toBeNull()
+  })
+
+  it('spans exactly 8 calendar days inclusive (end minus 7 to end)', () => {
+    const now = new Date('2026-08-03T19:18:00Z')
+    const { startDate, endDate } = defaultRange(now)
+
+    const start = new Date(startDate)
+    const end = new Date(endDate)
+    const days = Math.round((end.valueOf() - start.valueOf()) / 86_400_000) + 1
+
+    expect(days).toBe(8)
+    expect(days).toBeLessThanOrEqual(31)
+  })
+
+  it('derives the end date from the UTC calendar date, not the local one', () => {
+    // now is 2026-08-03T19:18:00Z: late enough in the UTC day that a
+    // positive-offset local clock would already show 2026-08-04.
+    const now = new Date('2026-08-03T19:18:00Z')
+    const { startDate, endDate } = defaultRange(now)
+
+    expect(endDate).toBe('2026-08-03')
+    expect(startDate).toBe('2026-07-27')
+  })
+
+  it('rolls the start date across a month boundary correctly', () => {
+    const now = new Date('2026-09-01T12:00:00Z')
+    const { startDate, endDate } = defaultRange(now)
+
+    expect(endDate).toBe('2026-09-01')
+    expect(startDate).toBe('2026-08-25')
+  })
+
+  it('rolls the start date across a year boundary correctly', () => {
+    const now = new Date('2026-01-01T12:00:00Z')
+    const { startDate, endDate } = defaultRange(now)
+
+    expect(endDate).toBe('2026-01-01')
+    expect(startDate).toBe('2025-12-25')
   })
 })
 

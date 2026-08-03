@@ -3,6 +3,7 @@ import { useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from '
 import { searchCities, storeWeatherData } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
 import {
+  defaultRange,
   formatCityLabel,
   MAX_RANGE_DAYS,
   validateInputs,
@@ -17,27 +18,6 @@ const PRESETS = [
   { label: 'New York', latitude: '40.7128', longitude: '-74.0060' },
   { label: 'Sydney', latitude: '-33.8688', longitude: '151.2093' },
 ]
-
-/** Ends today by product choice, spanning the 7 days back from it. Open-Meteo's
- *  ERA5 archive lags real time by roughly a day or two, so the most recent day
- *  or two of this window may come back with null readings while the archive
- *  catches up — the UI already renders that as gaps in the chart and `—` in
- *  the table, so no special-casing is needed here.
- *
- *  Built from local calendar components (not `toISOString()`, which converts
- *  to UTC and would shift "today" back a day for anyone west of UTC). */
-function defaultRange() {
-  const end = new Date()
-  const start = new Date(end)
-  start.setDate(start.getDate() - 7)
-  const formatDate = (d: Date) => {
-    const year = d.getFullYear()
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const date = String(d.getDate()).padStart(2, '0')
-    return `${year}-${month}-${date}`
-  }
-  return { startDate: formatDate(start), endDate: formatDate(end) }
-}
 
 const FIELD =
   'w-full rounded-md border border-[var(--axis-line)] bg-[var(--surface-card)] px-3 py-2 text-sm ' +

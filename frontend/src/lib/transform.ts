@@ -191,6 +191,47 @@ export function validateInputs(values: InputValues, now: Date = new Date()): str
   return null
 }
 
+/** Ends on the UTC calendar date `validateInputs` compares against (mirroring
+ *  the backend's `datetime.now(timezone.utc).date()`), spanning the 7 days
+ *  back from it. Open-Meteo's ERA5 archive lags real time by roughly a day
+ *  or two, so the most recent day or two of this window may come back with
+ *  null readings while the archive catches up — the UI already renders that
+ *  as gaps in the chart and `—` in the table, so no special-casing is needed
+ *  here.
+ *
+ *  Reads `getUTCFullYear`/`getUTCMonth`/`getUTCDate` explicitly rather than
+ *  `toISOString()`: the two are equivalent for `now = new Date()` (an
+ *  instant), but spelling out the UTC accessors makes it unmistakable that
+ *  this is deliberately the same clock `validateInputs` reads, not a local
+ *  date that happens to get converted. Building a locally-constructed date
+ *  and normalising it after the fact (as an earlier version of this
+ *  function did) is exactly the bug this guards against — the local
+ *  calendar day can be a day ahead of the UTC one, which made the default
+ *  end date fail `validateInputs`'s own future-date check for anyone east
+ *  of UTC.
+ *
+ *  Takes an injectable clock, defaulting to the real one, so the invariant
+ *  `validateInputs(defaultRange(now), now) === null` can be pinned to
+ *  specific instants in tests regardless of the machine's timezone. */
+export function defaultRange(now: Date = new Date()): { startDate: string; endDate: string } {
+  const formatUTCDate = (d: Date): string => {
+    const year = d.getUTCFullYear()
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+    const date = String(d.getUTCDate()).padStart(2, '0')
+    return `${year}-${month}-${date}`
+  }
+
+  // Midnight UTC on `now`'s UTC calendar date — not `now` itself — so the
+  // 7-day subtraction below stays anchored to whole UTC days.
+  const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  const start = new Date(end)
+  // setUTCDate (not setDate) so the rollover across month/year boundaries
+  // resolves against UTC, matching the clock the rest of this function reads.
+  start.setUTCDate(start.getUTCDate() - 7)
+
+  return { startDate: formatUTCDate(start), endDate: formatUTCDate(end) }
+}
+
 /** Builds a human label from whichever of name/admin1/country exist, e.g.
  *  "Mumbai, Maharashtra, India", degrading to "Mumbai, India" or "Mumbai"
  *  when a part is null — never a trailing or doubled comma. */
