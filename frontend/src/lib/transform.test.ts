@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   clampPage,
+  dayRangeGeometry,
   formatCityLabel,
   pageCount,
   paginate,
@@ -225,6 +226,63 @@ describe('summarizeRows', () => {
     expect(summary.warmest).toEqual({ value: 34, date: '2024-06-02' })
     expect(summary.coldest).toEqual({ value: 20, date: '2024-06-01' })
     expect(summary.avgSwing).toBe(10)
+  })
+})
+
+describe('dayRangeGeometry', () => {
+  const ROW = (
+    tempMin: number | null,
+    tempMax: number | null,
+    feelsMin: number | null,
+    feelsMax: number | null,
+  ): DailyRow => ({ date: '2024-06-01', tempMin, tempMax, feelsMin, feelsMax })
+
+  it('positions all four readings along an axis spanning the full set, for normal data', () => {
+    // axis = [19, 32] (feels-like sit just outside min/max here), span 13
+    const geometry = dayRangeGeometry(ROW(20, 30, 19, 32))
+
+    expect(geometry.feelsMinPct).toBeCloseTo(0)
+    expect(geometry.minPct).toBeCloseTo(((20 - 19) / 13) * 100)
+    expect(geometry.maxPct).toBeCloseTo(((30 - 19) / 13) * 100)
+    expect(geometry.feelsMaxPct).toBeCloseTo(100)
+  })
+
+  it('places every point at the midpoint when min and max are equal and feels-like is absent', () => {
+    const geometry = dayRangeGeometry(ROW(25, 25, null, null))
+
+    expect(geometry.minPct).toBe(50)
+    expect(geometry.maxPct).toBe(50)
+    expect(geometry.feelsMinPct).toBeNull()
+    expect(geometry.feelsMaxPct).toBeNull()
+  })
+
+  it('extends the axis to include feels-like readings that fall outside the min-max span', () => {
+    // axis = [10, 40] driven entirely by the feels-like readings
+    const geometry = dayRangeGeometry(ROW(20, 30, 10, 40))
+
+    expect(geometry.feelsMinPct).toBe(0)
+    expect(geometry.minPct).toBeCloseTo(((20 - 10) / 30) * 100)
+    expect(geometry.maxPct).toBeCloseTo(((30 - 10) / 30) * 100)
+    expect(geometry.feelsMaxPct).toBe(100)
+  })
+
+  it('returns all nulls when every reading is null', () => {
+    expect(dayRangeGeometry(ROW(null, null, null, null))).toEqual({
+      minPct: null,
+      maxPct: null,
+      feelsMinPct: null,
+      feelsMaxPct: null,
+    })
+  })
+
+  it('omits a reading from the axis and the result when only it is null', () => {
+    const geometry = dayRangeGeometry(ROW(20, 30, null, 34))
+
+    expect(geometry.feelsMinPct).toBeNull()
+    // axis = [20, 34], span 14
+    expect(geometry.minPct).toBe(0)
+    expect(geometry.maxPct).toBeCloseTo((10 / 14) * 100)
+    expect(geometry.feelsMaxPct).toBe(100)
   })
 })
 

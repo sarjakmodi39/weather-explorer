@@ -59,7 +59,8 @@ export function FileList({
                   type="button"
                   onClick={() => onSelect(file.name)}
                   aria-current={selected}
-                  className={`w-full rounded-md border px-3 py-2 text-left text-sm transition-colors ${
+                  className={`focus-ring w-full scale-100 rounded-md border px-3 py-2 text-left text-sm
+                    transition-all duration-150 ease-out hover:scale-[1.01] active:scale-[0.99] ${
                     selected
                       ? 'border-[var(--accent-soft-border)] bg-[var(--accent-soft)]'
                       : 'border-transparent hover:bg-[var(--surface-page)]'

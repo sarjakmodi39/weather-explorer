@@ -107,6 +107,68 @@ body {
   color: var(--ink-primary);
 }
 
+/* --- Motion --------------------------------------------------------------
+ * A small, restrained set of entrance/feedback animations, all opacity +
+ * transform (never a layout property, so nothing here triggers reflow).
+ * `theme-transition` is added to <html> only on the *first* explicit toggle
+ * (see useTheme.ts) — never present on initial load — so a stored dark
+ * preference resolving on a light-OS system doesn't visibly cross-fade the
+ * moment the page mounts; every toggle after that first click does. */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 320ms ease-out both;
+}
+
+/* Staggers the direct children of a stat-tile row so they arrive in
+ * sequence rather than all at once. Four steps covers every stat-tile grid
+ * in the app (the 3-tile Overview row, the 4-tile single-day row); a fifth
+ * or later child (none currently exist) simply reuses the last delay. */
+.stagger > * {
+  animation: fade-in-up 320ms ease-out both;
+}
+.stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.stagger > *:nth-child(2) {
+  animation-delay: 60ms;
+}
+.stagger > *:nth-child(3) {
+  animation-delay: 120ms;
+}
+.stagger > *:nth-child(4) {
+  animation-delay: 180ms;
+}
+
+:root.theme-transition,
+:root.theme-transition * {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Axis and legend text render as SVG <text>, out of Tailwind's reach —
  * tabular figures belong here (table columns and axis ticks), never on
  * large standalone numbers. */
@@ -133,11 +195,28 @@ body {
  * Height is identical for primary and secondary by construction: both use
  * the same padding, line-height and a 1px border (primary's is transparent,
  * so it costs the same box-model space as secondary's visible one). */
+/* Shared focus-visible treatment: a clear ring for keyboard users only
+ * (never on a mouse click), never the browser's own outline removed without
+ * a replacement. A real Tailwind utility (via @utility, not a plain @layer
+ * components class) so it can be both applied directly in markup and
+ * composed with @apply below. */
+@utility focus-ring {
+  outline: none;
+  &:focus-visible {
+    --tw-ring-color: var(--accent);
+    box-shadow:
+      0 0 0 2px var(--surface-card),
+      0 0 0 4px var(--accent);
+  }
+}
+
 @layer components {
   .btn-primary,
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-md border px-4 py-2 text-sm leading-5
-      font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+    @apply focus-ring inline-flex scale-100 items-center justify-center gap-1.5 rounded-md border px-4 py-2
+      text-sm leading-5 font-medium whitespace-nowrap transition-all duration-150 ease-out
+      hover:scale-[1.02] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50
+      disabled:hover:scale-100;
   }
 
   .btn-primary {
@@ -149,8 +228,9 @@ body {
   }
 
   .btn-chip {
-    @apply inline-flex items-center justify-center rounded-full border border-[var(--axis-line)] px-3 py-1
-      text-xs font-normal whitespace-nowrap text-[var(--ink-secondary)] transition-colors
-      hover:bg-[var(--surface-page)] disabled:cursor-not-allowed disabled:opacity-50;
+    @apply focus-ring inline-flex scale-100 items-center justify-center rounded-full border
+      border-[var(--axis-line)] px-3 py-1 text-xs font-normal whitespace-nowrap text-[var(--ink-secondary)]
+      transition-all duration-150 ease-out hover:scale-[1.03] hover:bg-[var(--surface-page)]
+      active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100;
   }
 }

@@ -76,7 +76,8 @@ export function DataTable({ rows }: { rows: DailyRow[] }) {
           <select
             value={pageSize}
             onChange={(event) => setPageSize(Number(event.target.value))}
-            className="rounded-md border border-[var(--axis-line)] bg-[var(--surface-card)] px-2 py-1 text-[var(--ink-primary)]"
+            className="focus-ring rounded-md border border-[var(--axis-line)] bg-[var(--surface-card)] px-2 py-1
+              text-[var(--ink-primary)] transition-colors duration-150"
           >
             {PAGE_SIZES.map((size) => (
               <option key={size} value={size}>
@@ -91,7 +92,9 @@ export function DataTable({ rows }: { rows: DailyRow[] }) {
             type="button"
             onClick={() => setPage((current) => Math.max(1, current - 1))}
             disabled={effectivePage === 1}
-            className="rounded-md border border-[var(--axis-line)] px-3 py-1 text-[var(--ink-secondary)] disabled:opacity-40"
+            className="focus-ring scale-100 rounded-md border border-[var(--axis-line)] px-3 py-1
+              text-[var(--ink-secondary)] transition-all duration-150 ease-out hover:scale-[1.02]
+              active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
           >
             Previous
           </button>
@@ -102,7 +105,9 @@ export function DataTable({ rows }: { rows: DailyRow[] }) {
             type="button"
             onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
             disabled={effectivePage === totalPages}
-            className="rounded-md border border-[var(--axis-line)] px-3 py-1 text-[var(--ink-secondary)] disabled:opacity-40"
+            className="focus-ring scale-100 rounded-md border border-[var(--axis-line)] px-3 py-1
+              text-[var(--ink-secondary)] transition-all duration-150 ease-out hover:scale-[1.02]
+              active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100"
           >
             Next
           </button>

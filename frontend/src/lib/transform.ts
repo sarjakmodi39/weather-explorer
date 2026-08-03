@@ -72,6 +72,52 @@ export function summarizeRows(rows: DailyRow[]): RowsSummary {
   }
 }
 
+export interface DayRangeGeometry {
+  /** Percentage position (0–100) of the day's min reading along the shared
+   *  axis, or null when tempMin is missing. */
+  minPct: number | null
+  /** Percentage position of the day's max reading, or null when missing. */
+  maxPct: number | null
+  /** Percentage position of the feels-like min reading, or null when missing. */
+  feelsMinPct: number | null
+  /** Percentage position of the feels-like max reading, or null when missing. */
+  feelsMaxPct: number | null
+}
+
+/** Positioning math for the single-day range bar: a horizontal axis scaled to
+ *  fit all four readings (not just min/max), so a feels-like value outside
+ *  the min-max span is never clipped off the track. Returns percentages
+ *  (0-100) along that axis for each reading, or null wherever the reading
+ *  itself is null — the caller decides how to render a missing point.
+ *
+ *  When every present value is identical (including the degenerate case of
+ *  a single non-null reading), the axis has zero span; every point is placed
+ *  at the midpoint (50%) rather than dividing by zero. Rendering a visible
+ *  minimum-width mark for a zero-width min-max range is a presentation
+ *  concern, left to the component. */
+export function dayRangeGeometry(row: DailyRow): DayRangeGeometry {
+  const values = [row.tempMin, row.tempMax, row.feelsMin, row.feelsMax].filter(
+    (value): value is number => value !== null,
+  )
+
+  if (values.length === 0) {
+    return { minPct: null, maxPct: null, feelsMinPct: null, feelsMaxPct: null }
+  }
+
+  const axisMin = Math.min(...values)
+  const axisMax = Math.max(...values)
+  const span = axisMax - axisMin
+
+  const pct = (value: number): number => (span === 0 ? 50 : ((value - axisMin) / span) * 100)
+
+  return {
+    minPct: row.tempMin !== null ? pct(row.tempMin) : null,
+    maxPct: row.tempMax !== null ? pct(row.tempMax) : null,
+    feelsMinPct: row.feelsMin !== null ? pct(row.feelsMin) : null,
+    feelsMaxPct: row.feelsMax !== null ? pct(row.feelsMax) : null,
+  }
+}
+
 export function paginate<T>(rows: T[], page: number, pageSize: number): T[] {
   if (page < 1) return []
   const start = (page - 1) * pageSize

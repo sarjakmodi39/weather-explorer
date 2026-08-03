@@ -16,7 +16,7 @@ export function StatTile({
   accent?: string
 }) {
   return (
-    <div className="rounded-lg border border-[var(--grid-line)] bg-[var(--surface-card)] px-4 py-3">
+    <div className="rounded-lg border border-[var(--grid-line)] bg-[var(--surface-card)] px-4 py-3 shadow-sm">
       <dt className="flex items-center gap-1.5 text-xs font-medium tracking-wide text-[var(--ink-muted)] uppercase">
         {accent && (
           <span
@@ -27,7 +27,7 @@ export function StatTile({
         )}
         {label}
       </dt>
-      <dd className="mt-1 text-2xl font-semibold text-[var(--ink-primary)]">{value}</dd>
+      <dd className="mt-1 text-2xl font-semibold tracking-tight text-[var(--ink-primary)]">{value}</dd>
       {sublabel && <p className="mt-0.5 text-xs text-[var(--ink-secondary)]">{sublabel}</p>}
     </div>
   )

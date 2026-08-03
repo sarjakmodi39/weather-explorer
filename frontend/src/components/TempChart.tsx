@@ -12,9 +12,15 @@ import {
   type TooltipContentProps,
 } from 'recharts'
 
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion'
 import type { ChartColors } from '../lib/theme'
 import type { DailyRow } from '../lib/transform'
+import { DayRangeBar } from './DayRangeBar'
 import { StatTile } from './StatTile'
+
+/** Recharts' own animation is JS-driven and can't be reached by the
+ *  reduced-motion CSS override in index.css, so it's gated explicitly here. */
+const CHART_ANIMATION_DURATION = 350
 
 const SERIES = [
   { key: 'tempMax', name: 'Max temp', colorKey: 'seriesMax' },
@@ -154,6 +160,7 @@ function ChartTooltip({
 export function TempChart({ rows, colors }: { rows: DailyRow[]; colors: ChartColors }) {
   const chartData = useMemo(() => toChartRows(rows), [rows])
   const yScale = useMemo(() => computeYScale(rows), [rows])
+  const reducedMotion = usePrefersReducedMotion()
 
   if (rows.length === 0) {
     return (
@@ -164,13 +171,17 @@ export function TempChart({ rows, colors }: { rows: DailyRow[]; colors: ChartCol
   }
 
   // A single day is a headline number, not a trend: four lonely dots on a
-  // line chart tell no story, so the number itself becomes the chart.
+  // line chart tell no story. A horizontal range bar (min-max track, with
+  // both feels-like readings marked on the same axis) is the real visual in
+  // place of the line chart; the four tiles beneath still carry the exact
+  // figures.
   if (rows.length === 1) {
     const [row] = rows
     return (
       <div className="space-y-3">
         <p className="text-sm text-[var(--ink-secondary)]">Single day of data — {row.date}</p>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <DayRangeBar row={row} colors={colors} />
+        <div className="stagger grid grid-cols-2 gap-3 sm:grid-cols-4">
           <StatTile label="Max temp" value={formatTemp(row.tempMax)} accent={colors.seriesMax} />
           <StatTile label="Min temp" value={formatTemp(row.tempMin)} accent={colors.seriesMin} />
           <StatTile
@@ -228,7 +239,8 @@ export function TempChart({ rows, colors }: { rows: DailyRow[]; colors: ChartCol
             stroke="none"
             fill="transparent"
             legendType="none"
-            isAnimationActive={false}
+            isAnimationActive={!reducedMotion}
+            animationDuration={CHART_ANIMATION_DURATION}
             connectNulls={false}
             activeDot={false}
           />
@@ -240,7 +252,8 @@ export function TempChart({ rows, colors }: { rows: DailyRow[]; colors: ChartCol
             fill={colors.seriesMax}
             fillOpacity={0.12}
             legendType="none"
-            isAnimationActive={false}
+            isAnimationActive={!reducedMotion}
+            animationDuration={CHART_ANIMATION_DURATION}
             connectNulls={false}
             activeDot={false}
           />
@@ -254,7 +267,8 @@ export function TempChart({ rows, colors }: { rows: DailyRow[]; colors: ChartCol
               stroke={colors[series.colorKey]}
               dot={false}
               strokeWidth={2}
-              isAnimationActive={false}
+              isAnimationActive={!reducedMotion}
+              animationDuration={CHART_ANIMATION_DURATION}
               // Leave a visible gap where a reading is null rather than
               // drawing a straight line through missing data.
               connectNulls={false}

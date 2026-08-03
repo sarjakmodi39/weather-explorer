@@ -18,14 +18,18 @@ const PRESETS = [
   { label: 'Sydney', latitude: '-33.8688', longitude: '151.2093' },
 ]
 
-/** Default to a fully-available 7-day window: Open-Meteo's archive lags
- *  roughly two days, so we end four days back to keep margin for users at
- *  UTC+13/+14, who would otherwise land exactly on the boundary. */
+/** Ends today by product choice, spanning the 7 days back from it. Open-Meteo's
+ *  ERA5 archive lags real time by roughly a day or two, so the most recent day
+ *  or two of this window may come back with null readings while the archive
+ *  catches up — the UI already renders that as gaps in the chart and `—` in
+ *  the table, so no special-casing is needed here.
+ *
+ *  Built from local calendar components (not `toISOString()`, which converts
+ *  to UTC and would shift "today" back a day for anyone west of UTC). */
 function defaultRange() {
   const end = new Date()
-  end.setDate(end.getDate() - 4)
   const start = new Date(end)
-  start.setDate(start.getDate() - 6)
+  start.setDate(start.getDate() - 7)
   const formatDate = (d: Date) => {
     const year = d.getFullYear()
     const month = String(d.getMonth() + 1).padStart(2, '0')
@@ -194,13 +198,14 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
         )}
 
         {cityResults && (
-          <ul className="space-y-1 rounded-md border border-[var(--grid-line)] bg-[var(--surface-page)] p-2">
+          <ul className="animate-fade-in-up space-y-1 rounded-md border border-[var(--grid-line)] bg-[var(--surface-page)] p-2">
             {cityResults.map((result, index) => (
               <li key={`${result.latitude},${result.longitude},${index}`}>
                 <button
                   type="button"
                   onClick={() => applyCity(result)}
-                  className="w-full rounded-md px-2 py-1 text-left text-sm text-[var(--ink-secondary)] hover:bg-[var(--surface-card)]"
+                  className="focus-ring w-full rounded-md px-2 py-1 text-left text-sm text-[var(--ink-secondary)]
+                    transition-colors duration-150 hover:bg-[var(--surface-card)]"
                 >
                   {formatCityLabel(result)}
                 </button>

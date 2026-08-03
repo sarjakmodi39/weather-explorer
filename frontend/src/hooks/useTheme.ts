@@ -40,6 +40,11 @@ export function useTheme() {
   }, [explicit])
 
   const toggleTheme = useCallback(() => {
+    // Only added on an actual toggle, never present on initial mount — so a
+    // stored preference that differs from the OS scheme resolves instantly
+    // on load, and only a deliberate click gets the short cross-fade.
+    document.documentElement.classList.add('theme-transition')
+
     setTheme((current) => {
       const next: Theme = current === 'dark' ? 'light' : 'dark'
       window.localStorage.setItem(THEME_STORAGE_KEY, next)
