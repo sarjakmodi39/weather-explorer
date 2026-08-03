@@ -1,0 +1,498 @@
+<title>Weather Explorer — Case Study Submission Report</title>
+<style>
+  :root {
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: #1a1a18;
+    background: #ffffff;
+    font-size: 10.3pt;
+    line-height: 1.5;
+    max-width: 100%;
+  }
+  code, pre, .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: 9pt;
+  }
+  h1, h2, h3, h4 {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: #0d0d0c;
+    line-height: 1.25;
+    font-weight: 700;
+  }
+  h1 { font-size: 20pt; margin: 0 0 4pt 0; letter-spacing: -0.01em; }
+  h2 {
+    font-size: 13.5pt;
+    margin: 22pt 0 8pt 0;
+    padding-bottom: 4pt;
+    border-bottom: 1.4pt solid #1a1a18;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  h2 .num { color: #6b6a64; font-weight: 600; margin-right: 6pt; }
+  h3 {
+    font-size: 11pt;
+    margin: 14pt 0 5pt 0;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  h4 {
+    font-size: 10.3pt;
+    margin: 10pt 0 3pt 0;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  p { margin: 0 0 7pt 0; }
+  ul, ol { margin: 4pt 0 9pt 0; padding-left: 18pt; }
+  li { margin-bottom: 3pt; }
+  section { page-break-inside: auto; }
+  .keep { page-break-inside: avoid; }
+
+  .subtitle {
+    font-size: 11pt;
+    color: #47463f;
+    margin: 0 0 14pt 0;
+  }
+
+  .meta-strip {
+    font-size: 9pt;
+    color: #55534b;
+    border-top: 0.75pt solid #d8d6cc;
+    border-bottom: 0.75pt solid #d8d6cc;
+    padding: 6pt 0;
+    margin: 0 0 16pt 0;
+  }
+  .meta-strip span:not(:last-child)::after { content: " \00b7 "; color: #b7b5a8; }
+
+  .pending-box {
+    border: 1.5pt solid #b5411f;
+    background: #fdf1ec;
+    border-radius: 4pt;
+    padding: 10pt 14pt 12pt 14pt;
+    margin: 0 0 18pt 0;
+  }
+  .pending-box .label {
+    font-size: 8.7pt;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #a63d20;
+    margin-bottom: 6pt;
+  }
+  table.links { width: 100%; border-collapse: collapse; font-size: 9.6pt; }
+  table.links td { padding: 3pt 6pt; vertical-align: top; }
+  table.links td:first-child { font-weight: 600; width: 32%; color: #3a392f; }
+  .pending {
+    display: inline-block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 9pt;
+    font-weight: 700;
+    color: #a63d20;
+    background: #f8ded1;
+    border: 1pt dashed #c0552f;
+    border-radius: 3pt;
+    padding: 1pt 6pt;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 9.3pt;
+    margin: 6pt 0 12pt 0;
+  }
+  table.data th, table.data td {
+    border: 0.75pt solid #cfceC4;
+    border-color: #d3d2c7;
+    padding: 4pt 7pt;
+    text-align: left;
+    vertical-align: top;
+  }
+  table.data th {
+    background: #f1f0e9;
+    font-weight: 700;
+    color: #26251f;
+  }
+  table.data tr:nth-child(even) td { background: #fafaf6; }
+  table.data code {
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  table.data td, table.data th {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  table.api { table-layout: fixed; font-size: 8.9pt; }
+  table.api col.col-endpoint { width: 19%; }
+  table.api col.col-request { width: 23%; }
+  table.api col.col-success { width: 31%; }
+  table.api col.col-errors { width: 27%; }
+
+  pre {
+    background: #f4f3ec;
+    border: 0.75pt solid #d8d6cc;
+    border-radius: 4pt;
+    padding: 8pt 10pt;
+    margin: 6pt 0 10pt 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  code {
+    background: #f1f0e9;
+    border-radius: 2pt;
+    padding: 0 3pt;
+  }
+  pre code { background: none; padding: 0; }
+
+  .decision {
+    margin: 0 0 13pt 0;
+    padding: 8pt 10pt 8pt 11pt;
+    border-left: 3pt solid #4a5568;
+    background: #f7f7f4;
+  }
+  .decision h4 { margin: 0 0 4pt 0; }
+  .decision .tradeoff {
+    margin-top: 5pt;
+    font-size: 9.4pt;
+    color: #4a4940;
+  }
+  .decision .tradeoff .tag {
+    font-weight: 700;
+    color: #3a392f;
+  }
+
+  .finding {
+    margin: 0 0 14pt 0;
+    padding: 9pt 11pt;
+    border: 0.75pt solid #d3d2c7;
+    border-radius: 4pt;
+    background: #fbfbf8;
+  }
+  .finding h4 { margin: 0 0 5pt 0; font-size: 10.6pt; }
+  .finding .row { margin: 0 0 4pt 0; font-size: 9.6pt; }
+  .finding .row .tag {
+    font-weight: 700;
+    display: inline-block;
+    min-width: 78pt;
+    color: #3a392f;
+  }
+
+  .callout {
+    border-left: 3pt solid #8a7a2a;
+    background: #fbf8ec;
+    padding: 7pt 10pt;
+    font-size: 9.5pt;
+    margin: 6pt 0 10pt 0;
+  }
+
+  .diagram {
+    margin: 8pt 0 12pt 0;
+    text-align: center;
+  }
+  .diagram svg { max-width: 100%; height: auto; }
+
+  .small { font-size: 9pt; color: #55534b; }
+  strong { color: #14140f; }
+
+</style>
+
+<h1>Weather Explorer</h1>
+<p class="subtitle">A full-stack case study: fetch historical daily weather from Open-Meteo, store the raw JSON in cloud object storage, and browse it in a dashboard.</p>
+
+<div class="meta-strip">
+  <span>InRisk Labs case study</span>
+  <span>44 commits</span>
+  <span>116 backend tests</span>
+  <span>53 frontend tests</span>
+  <span>~882 backend LOC</span>
+  <span>~2205 frontend LOC</span>
+  <span>Python 3.12 / FastAPI</span>
+  <span>React 19 / Vite 8 / TypeScript 6</span>
+</div>
+
+<div class="pending-box keep">
+  <div class="label">Fill in before submission</div>
+  <table class="links">
+    <tr><td>GitHub repository</td><td><span class="pending">PENDING — insert before submission</span></td></tr>
+    <tr><td>Live dashboard</td><td><span class="pending">PENDING — insert before submission</span></td></tr>
+    <tr><td>Live API</td><td><span class="pending">PENDING — insert before submission</span></td></tr>
+  </table>
+</div>
+
+<h2><span class="num">1</span>What was built</h2>
+
+<p>The backend exposes three endpoints matching the brief:</p>
+<ul>
+  <li><code>POST /store-weather-data</code> — validates a latitude/longitude/date-range request, fetches the matching window from Open-Meteo's historical archive API, and stores the response verbatim under a generated filename.</li>
+  <li><code>GET /list-weather-files</code> — lists stored files (name, size, creation time), newest first.</li>
+  <li><code>GET /weather-file-content/{file}</code> — returns one stored file's JSON, or a 404 for anything that isn't a name this service could itself have produced.</li>
+</ul>
+<p>The dashboard flow: an input panel collects coordinates and a date range (with preset locations and a city-search box); submitting it stores a file and refreshes the file list; clicking a listed file loads its JSON and renders a temperature chart (or a single-day range bar, for one-day windows) plus a paginated data table, both derived from the same loaded payload.</p>
+
+<p>Two additions beyond the brief's literal scope:</p>
+<ul>
+  <li><strong>City search</strong> (<code>GET /geocode</code>) — a thin backend proxy over Open-Meteo's own geocoding API, so a user can type a city name instead of looking up coordinates. The browser still never calls Open-Meteo directly; only the backend does.</li>
+  <li><strong>An S3-compatible storage backend</strong> (<code>S3Storage</code>), alongside <code>GCSStorage</code> — added when the deployment target moved from GCP to an S3-compatible provider (see Deployment). Both satisfy the same <code>StorageClient</code> protocol; which one is active is chosen by configuration alone.</li>
+</ul>
+
+<h2><span class="num">2</span>Architecture</h2>
+
+<p>Routes stay thin (HTTP in, HTTP out); <code>schemas.py</code> owns validation; <code>services/</code> owns I/O; <code>naming.py</code> owns object-name construction and its traversal-safety check. The centrepiece is <code>backend/app/services/storage.py</code>'s <code>StorageClient</code> Protocol — a three-method surface (<code>save_json</code>, <code>list_files</code>, <code>get_json</code>) that every route depends on through FastAPI's <code>Depends(get_storage)</code> (<code>app/deps.py</code>), never on <code>google.cloud.storage</code> or <code>boto3</code> directly. Three implementations satisfy it: <code>GCSStorage</code> and <code>S3Storage</code> for production, <code>InMemoryStorage</code> for tests. Which production implementation is active is selected entirely by the <code>STORAGE_BACKEND</code> setting in <code>config.py</code>.</p>
+
+<div class="diagram keep">
+<svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Architecture diagram">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#4a4940"/>
+    </marker>
+  </defs>
+  <style>
+    .box { fill:#f7f7f2; stroke:#8a897d; stroke-width:1.1; rx:5; }
+    .boxlabel { font: 700 11px system-ui,sans-serif; fill:#1a1a18; }
+    .boxsub { font: 9px system-ui,sans-serif; fill:#5a594f; }
+    .edge { stroke:#4a4940; stroke-width:1.2; fill:none; marker-end:url(#arrow); }
+    .edgelabel { font: 8.5px system-ui,sans-serif; fill:#4a4940; }
+    .group { fill:none; stroke:#b8b6a8; stroke-width:1; stroke-dasharray:3,2; rx:6; }
+    .grouplabel { font: 700 8.5px system-ui,sans-serif; fill:#7a7869; letter-spacing:0.04em; }
+  </style>
+
+  <rect x="20" y="20" width="150" height="52" class="box"/>
+  <text x="95" y="42" text-anchor="middle" class="boxlabel">Browser</text>
+  <text x="95" y="57" text-anchor="middle" class="boxsub">React dashboard</text>
+
+  <rect x="300" y="15" width="180" height="62" class="box"/>
+  <text x="390" y="38" text-anchor="middle" class="boxlabel">FastAPI backend</text>
+  <text x="390" y="53" text-anchor="middle" class="boxsub">routes / schemas / errors</text>
+  <text x="390" y="66" text-anchor="middle" class="boxsub">the only server the browser calls</text>
+
+  <path class="edge" d="M170,46 L298,46"/>
+  <text x="234" y="40" text-anchor="middle" class="edgelabel">fetch (JSON)</text>
+
+  <rect x="590" y="15" width="150" height="62" class="box"/>
+  <text x="665" y="38" text-anchor="middle" class="boxlabel">Open-Meteo</text>
+  <text x="665" y="53" text-anchor="middle" class="boxsub">archive + geocoding</text>
+  <text x="665" y="66" text-anchor="middle" class="boxsub">APIs</text>
+
+  <path class="edge" d="M480,40 L588,40"/>
+  <text x="534" y="32" text-anchor="middle" class="edgelabel">httpx</text>
+  <path class="edge" d="M588,55 L480,55" marker-end="url(#arrow)"/>
+  <text x="534" y="70" text-anchor="middle" class="edgelabel">JSON response</text>
+
+  <rect x="255" y="140" width="270" height="46" class="box" fill="#eef0e6"/>
+  <text x="390" y="163" text-anchor="middle" class="boxlabel">StorageClient (Protocol)</text>
+  <text x="390" y="177" text-anchor="middle" class="boxsub">save_json · list_files · get_json</text>
+
+  <path class="edge" d="M390,77 L390,138"/>
+  <text x="420" y="112" text-anchor="middle" class="edgelabel">Depends(get_storage)</text>
+
+  <rect x="60" y="235" width="160" height="52" class="box"/>
+  <text x="140" y="257" text-anchor="middle" class="boxlabel">GCSStorage</text>
+  <text x="140" y="272" text-anchor="middle" class="boxsub">production — GCS bucket</text>
+
+  <rect x="300" y="235" width="160" height="52" class="box"/>
+  <text x="380" y="257" text-anchor="middle" class="boxlabel">S3Storage</text>
+  <text x="380" y="272" text-anchor="middle" class="boxsub">production — S3-compatible</text>
+
+  <rect x="540" y="235" width="170" height="52" class="box" fill="#f0ece2"/>
+  <text x="625" y="257" text-anchor="middle" class="boxlabel">InMemoryStorage</text>
+  <text x="625" y="272" text-anchor="middle" class="boxsub">tests — no network, no creds</text>
+
+  <path class="edge" d="M300,186 L150,233"/>
+  <path class="edge" d="M390,186 L390,233"/>
+  <path class="edge" d="M470,186 L610,233"/>
+
+  <rect x="35" y="210" width="695" height="83" class="group"/>
+  <text x="40" y="203" class="grouplabel">SELECTED BY STORAGE_BACKEND (config.py) — ROUTES NEVER CHOOSE</text>
+</svg>
+</div>
+
+<p><strong>Why this matters, concretely:</strong> all 116 backend tests run against a dependency override
+(<code>app.dependency_overrides[get_storage] = lambda: InMemoryStorage()</code>) — the whole suite needs no cloud
+credentials and makes no network calls except through <code>respx</code>-stubbed <code>httpx</code>. And when the
+deployment target changed from GCS to an S3-compatible provider (commit <code>1c6d8a0</code>), the change was
+contained to <code>services/storage.py</code>, <code>config.py</code>, and <code>deps.py</code> — <code>routes/weather.py</code>,
+<code>schemas.py</code>, and every route-level test were untouched, because they depend on the Protocol's
+three-method surface, not on which SDK implements it.</p>
+
+<h2><span class="num">3</span>API contract</h2>
+
+<table class="data api keep">
+<colgroup>
+  <col class="col-endpoint"><col class="col-request"><col class="col-success"><col class="col-errors">
+</colgroup>
+<tr><th>Endpoint</th><th>Request</th><th>Success</th><th>Errors</th></tr>
+<tr>
+  <td><code>POST /store-weather-data</code></td>
+  <td><code>{latitude, longitude, start_date, end_date}</code></td>
+  <td>200 <code>{"status":"ok","file":"&lt;name&gt;"}</code></td>
+  <td>400 (validation, or Open-Meteo's own rejection passed through); 502 (Open-Meteo or storage unreachable); 500 (unexpected)</td>
+</tr>
+<tr>
+  <td><code>GET /list-weather-files</code></td>
+  <td>—</td>
+  <td>200 <code>{"files":[{"name","size","created_at"}]}</code>, newest first; empty bucket → <code>{"files":[]}</code></td>
+  <td>502; 500</td>
+</tr>
+<tr>
+  <td><code>GET /weather-file-content/{file:path}</code></td>
+  <td>—</td>
+  <td>200 &lt;stored JSON, unmodified&gt;</td>
+  <td>404 for malformed <em>or</em> missing name — identical body either way; 502; 500</td>
+</tr>
+<tr>
+  <td><code>GET /geocode?q=</code></td>
+  <td><code>q</code> (≥2 chars after trimming)</td>
+  <td>200 <code>{"results":[{name, admin1, country, country_code, latitude, longitude}]}</code>; empty list for a query with no matches</td>
+  <td>400 (q too short); 502; 500</td>
+</tr>
+</table>
+
+<p>Every error response, at every one of those status codes, has the same shape: <code>{"status":"error","message":"&lt;reason&gt;"}</code>. This is enforced centrally in <code>errors.py</code> by three handlers — one for the app's own <code>AppError</code>, one that remaps FastAPI's default 422 validation response to 400 with a readable message, and a catch-all for anything unexpected, which logs the real exception and returns an opaque 500 body. The brief only mandates this shape for the 404 case; a single contract for every status code is worth more to the frontend's one <code>ApiError</code> class than per-case fidelity would be.</p>
+
+<h2><span class="num">4</span>Design decisions and assumptions</h2>
+
+<div class="decision keep">
+  <h4>"Range ≤ 31 days" is an inclusive day count</h4>
+  <p><code>schemas.py</code> computes <code>span = (end_date - start_date).days + 1</code> and rejects anything over <code>MAX_RANGE_DAYS = 31</code>. Jun 1 → Jul 1 is 31 days and passes; Jun 1 → Jul 2 is 32 and fails. The frontend's <code>validateInputs</code> mirrors this exact arithmetic so an obvious mistake costs no round trip.</p>
+  <p class="tradeoff"><span class="tag">Trade-off:</span> the brief's phrase is genuinely ambiguous between an inclusive count and a subtraction; this reading is stated explicitly (README, spec, code comment) precisely so it doesn't need re-deriving in review.</p>
+</div>
+
+<div class="decision keep">
+  <h4>"Full API JSON" means unmodified content, not unmodified bytes</h4>
+  <p><code>POST /store-weather-data</code> stores Open-Meteo's parsed response with no reshaping and no field stripping.</p>
+  <p class="tradeoff"><span class="tag">Trade-off:</span> storage re-serializes a parsed Python dict (<code>json.dumps(payload)</code>), so the JSON <em>value</em> is byte-for-byte equivalent in content, but whitespace, key order, and number formatting from the original wire response are not preserved. If a reviewer needs the literal upstream bytes, this is the one place semantics diverge from the raw response.</p>
+</div>
+
+<div class="decision keep">
+  <h4>Date bounds beyond the brief are validated server-side, and "today" is UTC</h4>
+  <p>The brief specifies range and ordering rules but not future dates or how far back the archive goes. <code>schemas.py</code> additionally rejects <code>end_date</code> in the future and <code>start_date</code> before 1940-01-01, evaluating "today" as <code>datetime.now(timezone.utc).date()</code> — not the server's local clock or the client's.</p>
+  <p class="tradeoff"><span class="tag">Trade-off:</span> Open-Meteo rejects both of these anyway; validating locally turns an upstream 502 (its own rejection, wrapped) into a direct 400 with a specific reason. Getting the UTC part right took several attempts — see Engineering findings.</p>
+</div>
+
+<div class="decision keep">
+  <h4>Malformed and missing filenames both return 404</h4>
+  <p><code>GET /weather-file-content/{file}</code> checks the filename against <code>OBJECT_NAME_PATTERN</code> (<code>naming.py</code>) with a strict <code>re.ASCII</code> <code>fullmatch</code> <strong>before any storage call</strong>. Anything that doesn't match — wrong shape, traversal attempt, junk — returns the identical <code>404 {"status":"error","message":"not found"}</code> a genuinely absent file gets.</p>
+  <p class="tradeoff"><span class="tag">Trade-off:</span> a different code or message for "malformed" vs. "absent" would let an attacker fingerprint bucket contents by probing names. Refusing to distinguish leaks nothing, at the cost of a slightly less specific error for a legitimate typo.</p>
+</div>
+
+<div class="decision keep">
+  <h4>Why the content route is <code>{file:path}</code>, not the brief's <code>{file}</code></h4>
+  <p>From the code, <code>routes/weather.py</code>:</p>
+  <pre><code>&#96;{file:path}&#96; rather than the brief's plain &#96;{file}&#96;: a single-segment
+converter matches against the *decoded* path, so a traversal string like
+"../../etc/passwd" would fail to match this route and fall through to
+Starlette's generic 404 ("Not Found", capital N) instead of the "not found"
+below — failing our own hostile-input test. The &#96;:path&#96; converter matches
+it here so is_valid_object_name() gets a chance to reject it.</code></pre>
+  <p>In plain terms: FastAPI's default single-segment path parameter cannot even capture a string containing <code>/</code> after URL-decoding — the router itself returns Starlette's generic 404 before the handler runs, so the endpoint's own validation and its own error shape never fire. Using <code>{file:path}</code> lets a hostile string reach the handler, where <code>is_valid_object_name()</code> rejects it and returns the app's uniform error body instead.</p>
+  <p class="tradeoff"><span class="tag">Trade-off:</span> this is a deliberate, documented departure from the specified interface, made to <em>keep</em> the contract (one 404 shape for every kind of bad input) rather than to shortcut it — a reviewer testing the brief's literal <code>{file}</code> against a traversal string would watch it fail the very test the brief implies it should pass.</p>
+</div>
+
+<div class="decision keep">
+  <h4>Listing is unpaginated, but deliberately cheap</h4>
+  <p><code>GET /list-weather-files</code> makes one <code>list_blobs</code> call with a <code>fields</code> mask (<code>items(name,size,timeCreated),nextPageToken</code>) so GCS returns only the three fields the response needs — no per-object metadata fetches. (The S3 implementation instead pages through <code>list_objects_v2</code>'s 1000-key truncation with a paginator, since that API truncates where GCS's does not; both stay a single logical listing operation from the caller's perspective.)</p>
+  <p class="tradeoff"><span class="tag">Trade-off:</span> this assumes bucket contents stay small enough that no pagination is needed at the API layer — see Known limitations.</p>
+</div>
+
+<div class="decision keep">
+  <h4>CORS is an explicit origin allowlist, never <code>*</code></h4>
+  <p><code>ALLOWED_ORIGINS</code> in <code>config.py</code> is a comma-separated allowlist, parsed into <code>origin_list</code> and passed straight to <code>CORSMiddleware</code>.</p>
+  <p class="tradeoff"><span class="tag">Trade-off:</span> requires setting the real frontend origin at deploy time (and a temporary permissive value during the two-pass deploy in DEPLOY.md), rather than the zero-configuration convenience of a wildcard.</p>
+</div>
+
+<div class="decision keep">
+  <h4>The browser never calls Open-Meteo</h4>
+  <p>Only <code>services/open_meteo.py</code> and <code>services/geocoding.py</code> talk to Open-Meteo; the frontend only ever calls the backend's own endpoints. Loaded files are cached in memory by name (<code>App.tsx</code>, a <code>useRef(new Map())</code>), so re-selecting an already-loaded file is instant and costs no request.</p>
+  <p class="tradeoff"><span class="tag">Trade-off:</span> the cache is per-session and unbounded — acceptable for a case study's file counts, not a general-purpose cache policy.</p>
+</div>
+
+<div class="decision keep">
+  <h4><code>POST /store-weather-data</code> is public and unauthenticated</h4>
+  <p>Deliberate for a case study: there are no user accounts and nothing to protect beyond the outbound Open-Meteo call and a storage write.</p>
+  <p class="tradeoff"><span class="tag">Trade-off:</span> in a real deployment, the first addition would be an API key or a platform-level authenticated-invoker mechanism, plus basic rate limiting in front of this one route — it is the only one that costs an outbound network call and writes storage, so it is the one worth defending first.</p>
+</div>
+
+<h2><span class="num">5</span>Engineering findings</h2>
+<p class="small">Drawn from the project's engineering ledger (<code>.superpowers/sdd/2026-08-01-weather-explorer/progress.md</code>), which records every defect found in review and the ruling that resolved it. The five below were judged the most substantive; the ledger also records roughly two dozen deferred minor findings that were consciously left as-is.</p>
+
+<div class="finding keep">
+  <h4>1. 500 responses bypassed CORS entirely</h4>
+  <p class="row"><span class="tag">Symptom:</span> a genuine server error surfaced in the browser as a blocked fetch — "Cannot reach the API. Is the backend running?" — with no indication anything had actually failed server-side.</p>
+  <p class="row"><span class="tag">Root cause:</span> Starlette routes <code>@app.exception_handler(Exception)</code> to <code>ServerErrorMiddleware</code>, which sits <em>outside</em> <code>CORSMiddleware</code> in the default stack. A 500 built by that path never passes through <code>CORSMiddleware</code>, so it carries no <code>access-control-allow-origin</code> header; browsers block the response client-side, and the resulting error is indistinguishable from a network failure — pointing a debugger at connectivity instead of the logged server exception.</p>
+  <p class="row"><span class="tag">Fix:</span> a <code>@app.middleware("http")</code> catch-all registered <em>before</em> <code>add_middleware(CORSMiddleware, ...)</code> in <code>main.py</code> — Starlette's <code>add_middleware</code> inserts at index 0, so registering the catch-all first makes <code>CORSMiddleware</code> the outermost layer even around an unhandled exception. <code>test_unhandled_exception_still_carries_cors_header</code> in <code>test_cors.py</code> raises a <code>RuntimeError</code> from a throwaway route and asserts both the 500 status and the header's presence.</p>
+  <p class="row"><span class="tag">Found by:</span> the final whole-branch review — no single task-scoped review had reason to combine "CORS" and "an unhandled exception" in the same test.</p>
+</div>
+
+<div class="finding keep">
+  <h4>2. Dependency resolution runs before request-body validation</h4>
+  <p class="row"><span class="tag">Symptom:</span> with a misconfigured or unreachable storage backend, every <code>POST /store-weather-data</code> returned 500 — including requests with obviously invalid input (e.g. an out-of-range latitude) that should have failed validation with a 400 before storage was ever touched.</p>
+  <p class="row"><span class="tag">Root cause:</span> FastAPI resolves <code>Depends(get_storage)</code> before it validates the request body. The original <code>GCSStorage.__init__</code> constructed a real <code>google.cloud.storage.Client()</code> eagerly; if that construction raised, dependency resolution failed and the request never reached pydantic's validation — a 500 silently masked what should have been a 400. Invisible to the whole test suite, because the fixtures override <code>get_storage</code> with <code>InMemoryStorage</code>, which never raises.</p>
+  <p class="row"><span class="tag">Fix:</span> both <code>GCSStorage</code> and <code>S3Storage</code> are now inert at construction — the bucket name is stored, but the real client is built lazily behind a <code>_client</code> property on first actual use. Validation now always runs first; a storage failure surfaces only when storage is actually touched.</p>
+  <p class="row"><span class="tag">Found by:</span> a deploy-adjacent smoke test that exercised a real, unconfigured backend rather than the mocked test suite.</p>
+</div>
+
+<div class="finding keep">
+  <h4>3. A stale-response race in file selection</h4>
+  <p class="row"><span class="tag">Symptom:</span> selecting file A, then selecting file B before A's request resolved, could let A's late-arriving response overwrite B's already-rendered content — the visibly selected file (B, highlighted) would silently show A's data.</p>
+  <p class="row"><span class="tag">Root cause:</span> <code>App.tsx</code> held one shared async-loading instance for file content; nothing tracked which selection a given in-flight request belonged to, so whichever response arrived last won.</p>
+  <p class="row"><span class="tag">Fix:</span> a generation token captured synchronously before the <code>await</code> on every <code>selectFile</code> call, checked against the current token after the response resolves — a stale result still populates the cache (so it's correct if reselected later) but never overwrites the currently-displayed selection. Verified with puppeteer by forcing A to resolve at 1500ms and B at 200ms and confirming B's data survived on screen.</p>
+</div>
+
+<div class="finding keep">
+  <h4>4. Five separate local-vs-UTC date defects</h4>
+  <p>The project's own contract treats "today" as a UTC calendar date (matching the backend's <code>datetime.now(timezone.utc).date()</code>), but at least five distinct places computed it from a local <code>Date</code> accessor or a raw instant comparison instead, across five separate fixes: the frontend's <code>validateInputs</code> originally compared an instant against local wall-clock time rather than UTC calendar dates; a related future-date check needed the same correction; <code>defaultRange()</code> built its end date from local calendar components; the <em>backend's own</em> <code>date.today()</code> read the server's local clock rather than UTC; and even after all of those fixes, <code>defaultRange()</code> and <code>validateInputs()</code> still disagreed for users east of UTC — so the app's own default date range failed its own validator on first render, with nothing typed, because <code>defaultRange</code> read the local calendar while the validator read UTC.</p>
+  <p class="row"><span class="tag">Fix:</span> <code>defaultRange</code> now lives in <code>lib/transform.ts</code> next to <code>validateInputs</code>, takes the same injectable <code>now: Date = new Date()</code> clock, and reads only <code>getUTCFullYear</code>/<code>getUTCMonth</code>/<code>getUTCDate</code>/<code>setUTCDate</code>. The invariant <code>validateInputs(defaultRange(now), now) === null</code> is itself a test now, asserted at instants chosen because their local and UTC calendar dates differ, plus a month and a year boundary — so a regression that reintroduces a local-clock read fails a test rather than waiting for a user in the wrong timezone to hit it.</p>
+</div>
+
+<div class="finding keep">
+  <h4>5. The chart palette was validated, not chosen by eye</h4>
+  <p>The four line-series colors (max/min temperature, feels-like max/min) and the chart chrome, in both light and dark themes (<code>frontend/src/lib/theme.ts</code>), were run through a colorblind-safety check rather than picked visually. The worst adjacent pair under simulated color-vision deficiency measured a ΔE of 19.0 against a target minimum separation of 8 — comfortably clear — but the check also flagged that the light-mode "feels-like max" orange falls below a 3:1 contrast ratio against its background. That trade-off was accepted rather than hidden, which is exactly why <code>DataTable</code> sits beneath the chart as a mandatory element rather than an optional supplement: a reader who cannot reliably distinguish that series, or read it in bright light, can still read every value as a number.</p>
+</div>
+
+<h2><span class="num">6</span>Testing</h2>
+<p>116 backend tests across eight focused modules (<code>test_routes.py</code>, <code>test_schemas.py</code>, <code>test_storage.py</code>, <code>test_naming.py</code>, <code>test_open_meteo.py</code>, <code>test_geocoding.py</code>, <code>test_cors.py</code>, <code>test_errors.py</code>) and 53 frontend tests in a single pure-function suite (<code>lib/transform.test.ts</code>). Neither needs network access or credentials:</p>
+<ul>
+  <li>Backend tests override <code>get_storage</code> with <code>InMemoryStorage</code> via FastAPI's dependency-override mechanism, and stub <code>httpx</code> at the transport layer with <code>respx</code> so no request reaches Open-Meteo's archive or geocoding APIs.</li>
+  <li>Fake GCS/boto3 clients — injected through each storage class's optional <code>client</code> constructor parameter — exercise both <code>GCSStorage</code>'s and <code>S3Storage</code>'s real error-mapping paths (auth failures, missing objects, malformed JSON) without a cloud account.</li>
+  <li>Frontend tests target the pure functions where off-by-one bugs actually live: pagination bounds (<code>clampPage</code>, and <code>paginate</code>'s guard against a negative page reinterpreting <code>Array.slice</code>'s semantics), the inclusive 31-day rule mirrored exactly from <code>schemas.py</code>, columnar-to-row transformation with nulls preserved rather than dropped (<code>toDailyRows</code>), and the <code>defaultRange</code>/<code>validateInputs</code> UTC invariant from Finding 4.</li>
+</ul>
+<p>There is no React component test harness. That is a deliberate scope decision, not an oversight: the brief's graded rules — validation, naming, the storage contract, the error envelope — all live in pure, directly-testable functions on both sides of the stack. Component-level rendering and interaction tests would add tooling and maintenance cost without covering additional graded behavior. The two defects that only manifest in an actual render — the stale-selection race and a handful of layout issues — were instead caught and verified with a puppeteer-driven manual pass, recorded in the ledger rather than encoded as an automated component suite.</p>
+
+<h2><span class="num">7</span>Deployment</h2>
+<p>The backend runs as a non-root user inside a Docker container (Python 3.12 slim base); the frontend is a static Vite build. GCP/Cloud Run was the original target (see the design spec) but was abandoned before any deployment happened: activating Cloud Run and Cloud Build on a GCP project requires linking a billing account — a payment method — which was not available for this case study. The stack was pivoted to a no-card path: a Docker-hosted backend, Supabase Storage's S3-compatible API in place of GCS, and a static frontend host. The brief permits this — it names "GCS or S3" — and the pivot cost no route or schema changes, only the addition of <code>S3Storage</code> behind the existing Protocol.</p>
+<p class="callout"><strong>Honest note:</strong> <code>DEPLOY.md</code>, as committed, documents the original Cloud Run + GCS runbook in full detail. It was written (commit <code>40f7ddc</code>) before the GCP-abandonment pivot and has not yet been rewritten for the Render/Supabase-Storage/Vercel path the project actually intends to use — that decision is recorded in the engineering ledger, not yet in the committed runbook. A reviewer following <code>DEPLOY.md</code> literally today would be deploying the abandoned path. This is flagged here rather than glossed over.</p>
+<p>Backend and frontend URLs are inlined into the frontend bundle at build time (<code>VITE_API_BASE</code>), not read at runtime — changing the backend URL after a build requires a rebuild, not just an environment-variable edit on the host. If the chosen backend host's free tier sleeps the service on inactivity, the first request after an idle period pays a cold-start cost — commonly on the order of tens of seconds while the container boots — before the API responds normally again; subsequent requests are fast until the service idles out once more.</p>
+
+<h2><span class="num">8</span>Known limitations</h2>
+<ul>
+  <li><strong>Second-granularity filenames.</strong> The object-name timestamp is <code>%Y%m%dT%H%M%SZ</code> — seconds, not milliseconds. Two identical requests (same lat/lon/dates) completed within the same UTC second produce the same object name, and the second overwrites the first.</li>
+  <li><strong>No authentication.</strong> <code>POST /store-weather-data</code> is public; see the design-decisions section for what a production deployment would add first.</li>
+  <li><strong>Recharts bundle size.</strong> The production build's main chunk exceeds Vite's 500 KB warning threshold. It builds and runs fine; no code splitting has been added, since a single-page dashboard has nothing meaningful to split into a separate route.</li>
+  <li><strong>Listing is unpaginated</strong> at the API layer — see the corresponding design decision. Assumes bucket contents stay small.</li>
+  <li><strong>The most recent day or two may return null readings</strong> while Open-Meteo's ERA5 archive catches up to real time. The UI already renders a null as a gap in the chart and an em-dash in the table, so no special-casing was added for this specific lag.</li>
+  <li><strong><code>DEPLOY.md</code> is stale</strong> relative to the actual deployment plan — see the callout in the Deployment section above.</li>
+</ul>
+
+<h2><span class="num">9</span>Running locally</h2>
+<h3>Backend</h3>
+<pre><code>cd backend
+python -m venv .venv
+.venv\Scripts\activate          # source .venv/bin/activate on macOS/Linux
+pip install -r requirements-dev.txt
+copy .env.example .env          # cp on macOS/Linux — edit as needed
+uvicorn app.main:app --reload
+pytest                          # 116 tests, no network, no credentials</code></pre>
+
+<h3>Frontend</h3>
+<pre><code>cd frontend
+npm install
+copy .env.example .env.local    # set VITE_API_BASE=http://localhost:8000
+npm run dev
+npm test                        # 53 tests</code></pre>
+
+<h3>Running against a storage emulator (no cloud account needed)</h3>
+<p>Set <code>STORAGE_BACKEND=gcs</code> (or <code>s3</code>) and point the matching emulator variable at a local emulator instead of a real bucket, e.g. <code>STORAGE_EMULATOR_HOST=http://127.0.0.1:9023</code> in <code>backend/.env</code>.</p>
+<p class="callout">Use <strong>127.0.0.1</strong>, not <code>localhost</code>. The emulator binds IPv4 only, and on Windows, <code>localhost</code> resolves to <code>::1</code> (IPv6) first — every request then pays a failed IPv6 connection attempt before falling back to IPv4. Measured directly: 2.06s per call via <code>localhost</code> versus 0.009s via <code>127.0.0.1</code>, roughly 230× — which presents as the UI hanging on "Loading file…" when the actual cause is DNS/name-resolution ordering, not the emulator itself.</p>
