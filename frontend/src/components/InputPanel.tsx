@@ -61,26 +61,36 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
   const set = (key: keyof InputValues) => (event: ChangeEvent<HTMLInputElement>) =>
     setValues((previous) => ({ ...previous, [key]: event.target.value }))
 
+  // Clears any stale search feedback — the result list, the no-match flag,
+  // and the search error — so it never lingers next to a fresh selection or
+  // a query the user has since edited away from.
+  function clearCityFeedback() {
+    setCityResults(null)
+    setCityNoMatch(false)
+    citySearch.reset()
+  }
+
   // Applies a chosen result's coordinates, formatted to the same 4 decimal
-  // places the backend stores in the filename, then clears any stale
-  // search feedback so it doesn't linger next to a fresh selection.
+  // places the backend stores in the filename.
   function applyCity(result: GeocodeResult) {
     setValues((previous) => ({
       ...previous,
       latitude: result.latitude.toFixed(4),
       longitude: result.longitude.toFixed(4),
     }))
-    setCityResults(null)
-    setCityNoMatch(false)
-    citySearch.reset()
+    clearCityFeedback()
   }
 
   async function runCitySearch() {
+    // Without this, a held Enter key (OS key-repeat) or rapid presses fire
+    // overlapping searches; useAsync has no cancellation, so whichever
+    // response resolves last would win regardless of which query is newest.
+    if (citySearch.loading) return
+
     const query = cityQuery.trim()
     if (query.length < 2) return
 
-    setCityResults(null)
-    setCityNoMatch(false)
+    clearCityFeedback()
 
     const results = await citySearch.run(query)
     if (results === null) return // citySearch.error already carries the message
@@ -141,7 +151,13 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
             <input
               className={`${FIELD} min-w-0 flex-1`}
               value={cityQuery}
-              onChange={(event) => setCityQuery(event.target.value)}
+              onChange={(event) => {
+                setCityQuery(event.target.value)
+                // The previous results/message describe the old query, not
+                // this one — an edited box must not leave a stale list of
+                // still-clickable buttons for a city the user no longer typed.
+                clearCityFeedback()
+              }}
               onKeyDown={handleCityKeyDown}
               placeholder="e.g. Mumbai"
             />
