@@ -4,16 +4,27 @@ Routes stay thin: they translate HTTP to service calls and back. Validation
 lives in schemas.py, I/O in services/, naming in naming.py.
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.deps import get_storage
 from app.errors import AppError
 from app.naming import build_object_name, is_valid_object_name
-from app.schemas import ListFilesResponse, StoreWeatherRequest, StoreWeatherResponse
+from app.schemas import (
+    GeocodeResponse,
+    GeocodeResult,
+    ListFilesResponse,
+    StoreWeatherRequest,
+    StoreWeatherResponse,
+)
+from app.services.geocoding import search_cities
 from app.services.open_meteo import fetch_daily_history
 from app.services.storage import StorageClient
 
 router = APIRouter(tags=["weather"])
+
+# Cap on results returned to the client, independent of whatever the
+# geocoding service itself might be asked for.
+MAX_GEOCODE_RESULTS = 5
 
 
 @router.post("/store-weather-data", response_model=StoreWeatherResponse)
@@ -78,3 +89,23 @@ async def weather_file_content(
         raise AppError("not found", status_code=404)
 
     return payload
+
+
+@router.get("/geocode", response_model=GeocodeResponse)
+async def geocode(
+    q: str = Query(..., min_length=2, description="City name to search for"),
+) -> GeocodeResponse:
+    """Proxy Open-Meteo's geocoding search — the browser never calls it directly.
+
+    A query with no matches is a valid, successful search (200, empty list),
+    not a 404: the input was fine, there was simply nothing to find.
+    """
+    # Query(min_length=2) rejects a too-short raw string declaratively; a
+    # padded string like "  a" would still slip past that check, so strip
+    # first and re-check rather than trusting whitespace as real content.
+    query = q.strip()
+    if len(query) < 2:
+        raise AppError("q must be at least 2 characters", status_code=400)
+
+    results = await search_cities(query, limit=MAX_GEOCODE_RESULTS)
+    return GeocodeResponse(results=[GeocodeResult(**r) for r in results])

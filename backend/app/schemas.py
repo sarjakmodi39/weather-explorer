@@ -56,3 +56,16 @@ class StoredFile(BaseModel):
 
 class ListFilesResponse(BaseModel):
     files: list[StoredFile]
+
+
+class GeocodeResult(BaseModel):
+    name: str
+    admin1: str | None
+    country: str | None
+    country_code: str | None
+    latitude: float
+    longitude: float
+
+
+class GeocodeResponse(BaseModel):
+    results: list[GeocodeResult]

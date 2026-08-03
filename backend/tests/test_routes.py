@@ -11,6 +11,7 @@ from app.naming import is_valid_object_name
 from app.services.storage import GCSStorage
 
 ARCHIVE = "https://archive-api.open-meteo.com/v1/archive"
+GEOCODE = "https://geocoding-api.open-meteo.com/v1/search"
 
 SAMPLE = {
     "latitude": 19.125,
@@ -229,3 +230,45 @@ def test_invalid_body_still_gets_validated_when_storage_would_fail():
     assert response.status_code == 400
     assert response.json()["status"] == "error"
     assert "latitude" in response.json()["message"]
+
+
+@respx.mock
+def test_geocode_returns_matches_for_a_valid_query(client):
+    respx.get(GEOCODE).mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "results": [
+                    {
+                        "name": "Mumbai",
+                        "admin1": "Maharashtra",
+                        "country": "India",
+                        "country_code": "IN",
+                        "latitude": 19.07283,
+                        "longitude": 72.88261,
+                    }
+                ]
+            },
+        )
+    )
+
+    response = client.get("/geocode", params={"q": "Mumbai"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body["results"]) == 1
+    assert body["results"][0]["name"] == "Mumbai"
+
+
+def test_geocode_rejects_a_one_character_query(client):
+    response = client.get("/geocode", params={"q": "x"})
+
+    assert response.status_code == 400
+    assert response.json()["status"] == "error"
+
+
+def test_geocode_rejects_a_missing_query_param(client):
+    response = client.get("/geocode")
+
+    assert response.status_code == 400
+    assert response.json()["status"] == "error"

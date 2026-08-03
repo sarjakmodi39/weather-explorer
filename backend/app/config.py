@@ -51,6 +51,8 @@ class Settings(BaseSettings):
 
     open_meteo_url: str = "https://archive-api.open-meteo.com/v1/archive"
 
+    geocoding_url: str = "https://geocoding-api.open-meteo.com/v1/search"
+
     @property
     def origin_list(self) -> list[str]:
         return [o.strip() for o in self.allowed_origins.split(",") if o.strip()]
