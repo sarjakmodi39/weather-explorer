@@ -2,15 +2,23 @@ import type { Theme } from '../lib/theme'
 
 export function ThemeToggle({ theme, onToggle }: { theme: Theme; onToggle: () => void }) {
   const isDark = theme === 'dark'
+  // A state label ("Light mode" while light) reads as the button's target,
+  // not its current state — a light-mode reader would expect clicking it to
+  // *give* them light mode. Label the action instead, so it can only be
+  // read one way; aria-checked (via role="switch") carries the state for
+  // assistive tech separately from that action text.
+  const nextTheme = isDark ? 'light' : 'dark'
 
   return (
     <button
       type="button"
       onClick={onToggle}
-      aria-pressed={isDark}
+      role="switch"
+      aria-checked={isDark}
+      aria-label={`Switch to ${nextTheme} mode`}
       className="shrink-0 rounded-md border border-[var(--axis-line)] px-3 py-1.5 text-sm font-medium text-[var(--ink-secondary)] transition-colors hover:bg-[var(--surface-card)]"
     >
-      {isDark ? 'Dark' : 'Light'} mode
+      Switch to {nextTheme}
     </button>
   )
 }

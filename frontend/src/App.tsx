@@ -152,30 +152,39 @@ export default function App() {
                   )}
                 </div>
 
-                <div>
-                  <h3 className="mb-2 text-sm font-semibold tracking-wide text-[var(--ink-secondary)] uppercase">
-                    Overview
-                  </h3>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <StatTile
-                      label="Warmest day"
-                      value={summary.warmest ? `${summary.warmest.value}°C` : '—'}
-                      sublabel={summary.warmest?.date}
-                      accent={colors.seriesMax}
-                    />
-                    <StatTile
-                      label="Coldest day"
-                      value={summary.coldest ? `${summary.coldest.value}°C` : '—'}
-                      sublabel={summary.coldest?.date}
-                      accent={colors.seriesMin}
-                    />
-                    <StatTile
-                      label="Average daily swing"
-                      value={summary.avgSwing !== null ? `${summary.avgSwing.toFixed(1)}°C` : '—'}
-                      sublabel="mean of max − min"
-                    />
+                {/* On a single day, warmest === max and coldest === min for
+                   that one row — the per-series tiles TempChart renders in
+                   place of the chart already say strictly more (plus
+                   feels-like), so restating the same two numbers here would
+                   just be the same story told twice. Two or more days is
+                   where "warmest/coldest" adds information the per-day
+                   figures don't. */}
+                {rows.length > 1 && (
+                  <div>
+                    <h3 className="mb-2 text-sm font-semibold tracking-wide text-[var(--ink-secondary)] uppercase">
+                      Overview
+                    </h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <StatTile
+                        label="Warmest day"
+                        value={summary.warmest ? `${summary.warmest.value}°C` : '—'}
+                        sublabel={summary.warmest?.date}
+                        accent={colors.seriesMax}
+                      />
+                      <StatTile
+                        label="Coldest day"
+                        value={summary.coldest ? `${summary.coldest.value}°C` : '—'}
+                        sublabel={summary.coldest?.date}
+                        accent={colors.seriesMin}
+                      />
+                      <StatTile
+                        label="Average daily swing"
+                        value={summary.avgSwing !== null ? `${summary.avgSwing.toFixed(1)}°C` : '—'}
+                        sublabel="mean of max − min"
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <TempChart rows={rows} colors={colors} />
                 <DataTable rows={rows} />

@@ -40,6 +40,37 @@ function toChartRows(rows: DailyRow[]): ChartRow[] {
   }))
 }
 
+const TEMP_KEYS = ['tempMax', 'tempMin', 'feelsMax', 'feelsMin'] as const
+
+/** Temperature has no meaningful zero, so anchoring the axis there just
+ *  squashes the series into the middle of the plot. Instead derive the
+ *  domain from the data itself, padded and rounded outward to a clean
+ *  5-degree step. Depends only on `rows`, so it's stable across re-renders
+ *  that don't change the underlying file (hover, table paging, theme). */
+function computeYDomain(rows: DailyRow[]): [number, number] {
+  const STEP = 5
+  const values: number[] = []
+  for (const row of rows) {
+    for (const key of TEMP_KEYS) {
+      const value = row[key]
+      if (value !== null) values.push(value)
+    }
+  }
+
+  if (values.length === 0) return [0, STEP]
+
+  const rawMin = Math.min(...values)
+  const rawMax = Math.max(...values)
+  const padding = Math.max(2, (rawMax - rawMin) * 0.1)
+
+  const min = Math.floor((rawMin - padding) / STEP) * STEP
+  const max = Math.ceil((rawMax + padding) / STEP) * STEP
+
+  // Every reading identical: force a non-zero span so the line isn't flush
+  // against both edges of the plot.
+  return min === max ? [min - STEP, max + STEP] : [min, max]
+}
+
 function formatTemp(value: number | null): string {
   return value === null ? '—' : `${value}°C`
 }
@@ -93,6 +124,7 @@ function ChartTooltip({
 
 export function TempChart({ rows, colors }: { rows: DailyRow[]; colors: ChartColors }) {
   const chartData = useMemo(() => toChartRows(rows), [rows])
+  const yDomain = useMemo(() => computeYDomain(rows), [rows])
 
   if (rows.length === 0) {
     return (
@@ -144,9 +176,17 @@ export function TempChart({ rows, colors }: { rows: DailyRow[]; colors: ChartCol
             stroke={colors.axis}
             unit="°"
             width={48}
+            domain={yDomain}
+            allowDecimals={false}
           />
           <Tooltip content={(props) => <ChartTooltip {...props} colors={colors} />} />
-          <Legend wrapperStyle={{ fontSize: 12, color: colors.inkSecondary }} />
+          {/* Recharts' default itemSorter ("value") alphabetizes legend
+             entries, which splits the two "Feels-like" names away from
+             "Max/Min temp" — a different order than the stat tiles and
+             table. Disabling the sort keeps the render order below (which
+             already matches them), independent of paint order: the band
+             Areas still draw first so the lines stay on top. */}
+          <Legend itemSorter={null} wrapperStyle={{ fontSize: 12, color: colors.inkSecondary }} />
 
           {/* An invisible base up to the daily min, then the visible swing
              stacked on top of it: together they shade the max-min band so
