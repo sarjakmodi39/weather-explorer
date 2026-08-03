@@ -37,7 +37,7 @@ export function FileList({
           type="button"
           onClick={onRefresh}
           disabled={loading}
-          className="rounded-md border border-[var(--axis-line)] px-3 py-1 text-sm text-[var(--ink-secondary)] hover:bg-[var(--surface-page)] disabled:opacity-50"
+          className="btn-secondary"
         >
           {loading ? 'Loading…' : 'Browse'}
         </button>
@@ -50,16 +50,16 @@ export function FileList({
       )}
 
       {files.length > 0 && (
-        <ul className="max-h-96 space-y-1 overflow-y-auto">
+        <ul className="max-h-[428px] snap-y snap-proximity space-y-1 overflow-y-auto">
           {files.map((file) => {
             const selected = file.name === selectedName
             return (
-              <li key={file.name}>
+              <li key={file.name} className="snap-start">
                 <button
                   type="button"
                   onClick={() => onSelect(file.name)}
                   aria-current={selected}
-                  className={`w-full rounded-md border px-3 py-2 text-left transition-colors ${
+                  className={`w-full rounded-md border px-3 py-2 text-left text-sm transition-colors ${
                     selected
                       ? 'border-[var(--accent-soft-border)] bg-[var(--accent-soft)]'
                       : 'border-transparent hover:bg-[var(--surface-page)]'

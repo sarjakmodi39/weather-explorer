@@ -117,7 +117,7 @@ export default function App() {
             />
           </div>
 
-          <section className="rounded-lg border border-[var(--grid-line)] bg-[var(--surface-card)] p-4 shadow-sm sm:p-5">
+          <section className="self-start rounded-lg border border-[var(--grid-line)] bg-[var(--surface-card)] p-4 shadow-sm sm:p-5">
             <h2 className="mb-4 text-lg font-semibold text-[var(--ink-primary)]">Visualization</h2>
 
             {contentError && <StatusBanner kind="error" message={contentError} />}
@@ -127,24 +127,33 @@ export default function App() {
             )}
 
             {!contentLoading && !payload && !contentError && (
-              <StatusBanner
-                kind="info"
-                message="Select a stored file to see its chart and table."
-              />
+              <div className="flex min-h-72 flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-[var(--grid-line)] px-6 py-12 text-center">
+                <h3 className="text-base font-semibold text-[var(--ink-primary)]">
+                  No file selected
+                </h3>
+                <p className="max-w-sm text-sm text-[var(--ink-secondary)]">
+                  Select a stored file to see its chart and table.
+                </p>
+                {files.length === 0 && (
+                  <p className="max-w-sm text-sm text-[var(--ink-muted)]">
+                    Nothing stored yet — use Fetch &amp; store above to pull some data first.
+                  </p>
+                )}
+              </div>
             )}
 
             {!contentLoading && payload && (
               <div className="space-y-6">
-                <div>
-                  <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-                    <Metadata label="Latitude" value={payload.latitude?.toFixed(4) ?? '—'} />
-                    <Metadata label="Longitude" value={payload.longitude?.toFixed(4) ?? '—'} />
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-[var(--grid-line)] pb-3">
+                  <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                    <Metadata label="Lat" value={payload.latitude?.toFixed(4) ?? '—'} />
+                    <Metadata label="Lon" value={payload.longitude?.toFixed(4) ?? '—'} />
                     <Metadata label="Timezone" value={payload.timezone ?? '—'} />
                     <Metadata label="Days" value={String(rows.length)} />
                   </dl>
                   {selectedMeta && (
                     <p
-                      className="mt-2 truncate rounded-md bg-[var(--surface-page)] px-2 py-1 font-mono text-xs text-[var(--ink-muted)]"
+                      className="max-w-64 truncate text-xs text-[var(--ink-muted)]"
                       title={selectedMeta.name}
                     >
                       {selectedMeta.name}
@@ -199,7 +208,7 @@ export default function App() {
 
 function Metadata({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md bg-[var(--surface-page)] px-3 py-2">
+    <div className="flex items-baseline gap-1">
       <dt className="text-xs text-[var(--ink-muted)]">{label}</dt>
       <dd className="font-medium text-[var(--ink-secondary)]">{value}</dd>
     </div>

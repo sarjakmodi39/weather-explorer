@@ -113,3 +113,44 @@ body {
 .recharts-cartesian-axis-tick text {
   font-variant-numeric: tabular-nums;
 }
+
+/* Themed, thin scrollbars everywhere instead of the OS default (which reads
+ * as a bright chunky bar against a near-black dark-mode card). Firefox and
+ * current Chromium both support these two properties natively — no plugin
+ * needed. Thumb follows the same neutral token used for input borders, so it
+ * automatically tracks light/dark; track stays flush with the page. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--axis-line) var(--surface-page);
+}
+
+/* --- Button system -------------------------------------------------------
+ * One shared geometry so every button in the app — regardless of which card
+ * it lives in — has the same height, padding, radius, and type. Three roles:
+ *   .btn-primary   the one filled accent action (Fetch & store data)
+ *   .btn-secondary bordered/outline actions (Search, Browse, theme toggle)
+ *   .btn-chip      small pill presets (Mumbai/London/…) — legitimately smaller
+ * Height is identical for primary and secondary by construction: both use
+ * the same padding, line-height and a 1px border (primary's is transparent,
+ * so it costs the same box-model space as secondary's visible one). */
+@layer components {
+  .btn-primary,
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md border px-4 py-2 text-sm leading-5
+      font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply border-transparent bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent-hover)];
+  }
+
+  .btn-secondary {
+    @apply border-[var(--axis-line)] bg-transparent text-[var(--ink-secondary)] hover:bg-[var(--surface-page)];
+  }
+
+  .btn-chip {
+    @apply inline-flex items-center justify-center rounded-full border border-[var(--axis-line)] px-3 py-1
+      text-xs font-normal whitespace-nowrap text-[var(--ink-secondary)] transition-colors
+      hover:bg-[var(--surface-page)] disabled:cursor-not-allowed disabled:opacity-50;
+  }
+}

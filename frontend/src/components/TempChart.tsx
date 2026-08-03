@@ -42,13 +42,33 @@ function toChartRows(rows: DailyRow[]): ChartRow[] {
 
 const TEMP_KEYS = ['tempMax', 'tempMin', 'feelsMax', 'feelsMin'] as const
 
+/** Candidate tick steps, in degrees — every one is a "nice" round interval
+ *  for temperature. The smallest candidate that keeps the tick count near
+ *  TARGET_TICKS is chosen, so a wide range gets a coarse step (e.g. 10) and
+ *  a narrow one gets a fine step (e.g. 1), but the result is always a whole
+ *  multiple of a clean number — never an odd leftover interval. */
+const NICE_STEPS = [1, 2, 5, 10, 15, 20, 25, 50, 100]
+const TARGET_TICKS = 5
+
+function chooseStep(span: number): number {
+  const rough = span / (TARGET_TICKS - 1)
+  return NICE_STEPS.find((step) => step >= rough) ?? NICE_STEPS[NICE_STEPS.length - 1]
+}
+
+export interface YAxisScale {
+  domain: [number, number]
+  ticks: number[]
+}
+
 /** Temperature has no meaningful zero, so anchoring the axis there just
  *  squashes the series into the middle of the plot. Instead derive the
- *  domain from the data itself, padded and rounded outward to a clean
- *  5-degree step. Depends only on `rows`, so it's stable across re-renders
- *  that don't change the underlying file (hover, table paging, theme). */
-function computeYDomain(rows: DailyRow[]): [number, number] {
-  const STEP = 5
+ *  domain from the data itself, padded and rounded outward to a clean,
+ *  evenly-spaced step, and hand Recharts the exact tick list — passing an
+ *  explicit `domain` alone isn't enough, since Recharts' own "nice tick"
+ *  algorithm can still append a ragged boundary label past the requested
+ *  range. Depends only on `rows`, so it's stable across re-renders that
+ *  don't change the underlying file (hover, table paging, theme). */
+function computeYScale(rows: DailyRow[]): YAxisScale {
   const values: number[] = []
   for (const row of rows) {
     for (const key of TEMP_KEYS) {
@@ -57,18 +77,27 @@ function computeYDomain(rows: DailyRow[]): [number, number] {
     }
   }
 
-  if (values.length === 0) return [0, STEP]
+  if (values.length === 0) return { domain: [0, 10], ticks: [0, 2, 4, 6, 8, 10] }
 
   const rawMin = Math.min(...values)
   const rawMax = Math.max(...values)
+  // A flat series (every reading identical) gets padding=2 here, which
+  // already guarantees a non-zero span below — no separate fallback needed.
   const padding = Math.max(2, (rawMax - rawMin) * 0.1)
+  const paddedMin = rawMin - padding
+  const paddedMax = rawMax + padding
 
-  const min = Math.floor((rawMin - padding) / STEP) * STEP
-  const max = Math.ceil((rawMax + padding) / STEP) * STEP
+  const step = chooseStep(paddedMax - paddedMin)
+  const min = Math.floor(paddedMin / step) * step
+  let max = Math.ceil(paddedMax / step) * step
+  if (max === min) max = min + step
 
-  // Every reading identical: force a non-zero span so the line isn't flush
-  // against both edges of the plot.
-  return min === max ? [min - STEP, max + STEP] : [min, max]
+  const ticks: number[] = []
+  for (let tick = min; tick <= max + step / 1000; tick += step) {
+    ticks.push(Math.round(tick * 100) / 100)
+  }
+
+  return { domain: [min, max], ticks }
 }
 
 function formatTemp(value: number | null): string {
@@ -124,7 +153,7 @@ function ChartTooltip({
 
 export function TempChart({ rows, colors }: { rows: DailyRow[]; colors: ChartColors }) {
   const chartData = useMemo(() => toChartRows(rows), [rows])
-  const yDomain = useMemo(() => computeYDomain(rows), [rows])
+  const yScale = useMemo(() => computeYScale(rows), [rows])
 
   if (rows.length === 0) {
     return (
@@ -176,7 +205,8 @@ export function TempChart({ rows, colors }: { rows: DailyRow[]; colors: ChartCol
             stroke={colors.axis}
             unit="°"
             width={48}
-            domain={yDomain}
+            domain={yScale.domain}
+            ticks={yScale.ticks}
             allowDecimals={false}
           />
           <Tooltip content={(props) => <ChartTooltip {...props} colors={colors} />} />

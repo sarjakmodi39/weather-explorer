@@ -179,7 +179,7 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
               type="button"
               onClick={() => void runCitySearch()}
               disabled={citySearch.loading || cityQuery.trim().length < 2}
-              className="shrink-0 rounded-md border border-[var(--axis-line)] px-3 py-2 text-sm font-medium text-[var(--ink-secondary)] hover:bg-[var(--surface-page)] disabled:cursor-not-allowed disabled:opacity-50"
+              className="btn-secondary shrink-0"
             >
               {citySearch.loading ? 'Searching…' : 'Search'}
             </button>
@@ -255,7 +255,7 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
                   longitude: preset.longitude,
                 }))
               }
-              className="rounded-full border border-[var(--axis-line)] px-3 py-1 text-xs text-[var(--ink-secondary)] hover:bg-[var(--surface-page)]"
+              className="btn-chip"
             >
               {preset.label}
             </button>
@@ -265,7 +265,7 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
         <button
           type="submit"
           disabled={store.loading}
-          className="w-full rounded-md bg-[var(--accent)] px-4 py-2 text-sm font-medium text-[var(--accent-contrast)] transition-colors hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+          className="btn-primary w-full sm:w-auto"
         >
           {store.loading ? 'Fetching…' : 'Fetch & store data'}
         </button>

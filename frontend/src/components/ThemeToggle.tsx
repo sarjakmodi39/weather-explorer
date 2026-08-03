@@ -16,7 +16,7 @@ export function ThemeToggle({ theme, onToggle }: { theme: Theme; onToggle: () =>
       role="switch"
       aria-checked={isDark}
       aria-label={`Switch to ${nextTheme} mode`}
-      className="shrink-0 rounded-md border border-[var(--axis-line)] px-3 py-1.5 text-sm font-medium text-[var(--ink-secondary)] transition-colors hover:bg-[var(--surface-card)]"
+      className="btn-secondary shrink-0"
     >
       Switch to {nextTheme}
     </button>
