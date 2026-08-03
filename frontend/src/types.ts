@@ -34,3 +34,18 @@ export interface StoreResponse {
   status: string
   file: string
 }
+
+/** One geocoding match. `admin1` and `country` are only ever missing for the
+ *  handful of places Open-Meteo has no region/country data for. */
+export interface GeocodeResult {
+  name: string
+  admin1: string | null
+  country: string | null
+  country_code: string | null
+  latitude: number
+  longitude: number
+}
+
+export interface GeocodeResponse {
+  results: GeocodeResult[]
+}

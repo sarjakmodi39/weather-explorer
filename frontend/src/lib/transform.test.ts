@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest'
 
 import {
   clampPage,
+  formatCityLabel,
   pageCount,
   paginate,
   toDailyRows,
   validateInputs,
 } from './transform'
-import type { WeatherPayload } from '../types'
+import type { GeocodeResult, WeatherPayload } from '../types'
 
 const PAYLOAD: WeatherPayload = {
   daily: {
@@ -171,5 +172,32 @@ describe('validateInputs', () => {
       now,
     )
     expect(result).toBeNull()
+  })
+})
+
+describe('formatCityLabel', () => {
+  const MUMBAI: GeocodeResult = {
+    name: 'Mumbai',
+    admin1: 'Maharashtra',
+    country: 'India',
+    country_code: 'IN',
+    latitude: 19.076,
+    longitude: 72.8777,
+  }
+
+  it('joins name, admin1, and country when all are present', () => {
+    expect(formatCityLabel(MUMBAI)).toBe('Mumbai, Maharashtra, India')
+  })
+
+  it('drops admin1 when it is null', () => {
+    expect(formatCityLabel({ ...MUMBAI, admin1: null })).toBe('Mumbai, India')
+  })
+
+  it('drops country when it is null', () => {
+    expect(formatCityLabel({ ...MUMBAI, country: null })).toBe('Mumbai, Maharashtra')
+  })
+
+  it('falls back to the bare name when both admin1 and country are null', () => {
+    expect(formatCityLabel({ ...MUMBAI, admin1: null, country: null })).toBe('Mumbai')
   })
 })

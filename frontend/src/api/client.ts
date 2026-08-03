@@ -2,6 +2,8 @@
  *  Every failure arrives as an ApiError carrying the backend's message. */
 
 import type {
+  GeocodeResponse,
+  GeocodeResult,
   StoreRequest,
   StoreResponse,
   StoredFileMeta,
@@ -70,4 +72,10 @@ export function listWeatherFiles(): Promise<StoredFileMeta[]> {
 
 export function getWeatherFileContent(name: string): Promise<WeatherPayload> {
   return request<WeatherPayload>(`/weather-file-content/${encodeURIComponent(name)}`)
+}
+
+export function searchCities(query: string): Promise<GeocodeResult[]> {
+  return request<GeocodeResponse>(`/geocode?q=${encodeURIComponent(query)}`).then(
+    (r) => r.results,
+  )
 }

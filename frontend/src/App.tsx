@@ -84,7 +84,7 @@ export default function App() {
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
           <h1 className="text-xl font-bold text-slate-800 sm:text-2xl">Weather Explorer</h1>
           <p className="mt-0.5 text-sm text-slate-500">
-            Historical daily weather from Open-Meteo, stored in Google Cloud Storage.
+            Historical daily weather from Open-Meteo, stored in cloud object storage.
           </p>
         </div>
       </header>

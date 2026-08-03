@@ -2,7 +2,7 @@
  *  Everything the chart and table render is derived from the loaded file
  *  through these, so there is never a second copy of the data to drift. */
 
-import type { WeatherPayload } from '../types'
+import type { GeocodeResult, WeatherPayload } from '../types'
 
 export interface DailyRow {
   date: string
@@ -100,4 +100,11 @@ export function validateInputs(values: InputValues, now: Date = new Date()): str
   }
 
   return null
+}
+
+/** Builds a human label from whichever of name/admin1/country exist, e.g.
+ *  "Mumbai, Maharashtra, India", degrading to "Mumbai, India" or "Mumbai"
+ *  when a part is null — never a trailing or doubled comma. */
+export function formatCityLabel(result: GeocodeResult): string {
+  return [result.name, result.admin1, result.country].filter(Boolean).join(', ')
 }

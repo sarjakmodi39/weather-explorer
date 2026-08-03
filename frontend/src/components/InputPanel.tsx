@@ -1,8 +1,14 @@
-import { useState, type ChangeEvent, type FormEvent } from 'react'
+import { useState, type ChangeEvent, type FormEvent, type KeyboardEvent } from 'react'
 
-import { storeWeatherData } from '../api/client'
+import { searchCities, storeWeatherData } from '../api/client'
 import { useAsync } from '../hooks/useAsync'
-import { MAX_RANGE_DAYS, validateInputs, type InputValues } from '../lib/transform'
+import {
+  formatCityLabel,
+  MAX_RANGE_DAYS,
+  validateInputs,
+  type InputValues,
+} from '../lib/transform'
+import type { GeocodeResult } from '../types'
 import { StatusBanner } from './StatusBanner'
 
 const PRESETS = [
@@ -42,13 +48,62 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
   const [localError, setLocalError] = useState<string | null>(null)
   const [storedFile, setStoredFile] = useState<string | null>(null)
 
+  const [cityQuery, setCityQuery] = useState('')
+  const [cityResults, setCityResults] = useState<GeocodeResult[] | null>(null)
+  const [cityNoMatch, setCityNoMatch] = useState(false)
+
   const store = useAsync(storeWeatherData)
+  const citySearch = useAsync(searchCities)
 
   // Explicit type-only imports: `React.ChangeEvent` would rely on the UMD
   // global, which TypeScript rejects inside a module under the modern JSX
   // transform the Vite template configures.
   const set = (key: keyof InputValues) => (event: ChangeEvent<HTMLInputElement>) =>
     setValues((previous) => ({ ...previous, [key]: event.target.value }))
+
+  // Applies a chosen result's coordinates, formatted to the same 4 decimal
+  // places the backend stores in the filename, then clears any stale
+  // search feedback so it doesn't linger next to a fresh selection.
+  function applyCity(result: GeocodeResult) {
+    setValues((previous) => ({
+      ...previous,
+      latitude: result.latitude.toFixed(4),
+      longitude: result.longitude.toFixed(4),
+    }))
+    setCityResults(null)
+    setCityNoMatch(false)
+    citySearch.reset()
+  }
+
+  async function runCitySearch() {
+    const query = cityQuery.trim()
+    if (query.length < 2) return
+
+    setCityResults(null)
+    setCityNoMatch(false)
+
+    const results = await citySearch.run(query)
+    if (results === null) return // citySearch.error already carries the message
+
+    if (results.length === 0) {
+      setCityNoMatch(true)
+    } else if (results.length === 1) {
+      applyCity(results[0])
+    } else {
+      setCityResults(results)
+    }
+  }
+
+  // A nested button inside this <form> defaults to type="submit", and
+  // pressing Enter in a text field implicitly activates the form's submit
+  // button whenever one is present — both would submit the outer form, so
+  // both paths are guarded explicitly.
+  function handleCityKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      void runCitySearch()
+    }
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -80,6 +135,46 @@ export function InputPanel({ onStored }: { onStored: (filename: string) => void 
       <h2 className="mb-3 text-lg font-semibold text-slate-800">Fetch &amp; store</h2>
 
       <form onSubmit={submit} className="space-y-3">
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-600">Search for a city</span>
+          <div className="flex flex-wrap gap-2">
+            <input
+              className={`${FIELD} min-w-0 flex-1`}
+              value={cityQuery}
+              onChange={(event) => setCityQuery(event.target.value)}
+              onKeyDown={handleCityKeyDown}
+              placeholder="e.g. Mumbai"
+            />
+            <button
+              type="button"
+              onClick={() => void runCitySearch()}
+              disabled={citySearch.loading || cityQuery.trim().length < 2}
+              className="shrink-0 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-400"
+            >
+              {citySearch.loading ? 'Searching…' : 'Search'}
+            </button>
+          </div>
+        </label>
+
+        {cityResults && (
+          <ul className="space-y-1 rounded-md border border-slate-200 bg-slate-50 p-2">
+            {cityResults.map((result, index) => (
+              <li key={`${result.latitude},${result.longitude},${index}`}>
+                <button
+                  type="button"
+                  onClick={() => applyCity(result)}
+                  className="w-full rounded-md px-2 py-1 text-left text-sm text-slate-700 hover:bg-slate-200"
+                >
+                  {formatCityLabel(result)}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {cityNoMatch && <StatusBanner kind="info" message="No cities found." />}
+        {citySearch.error && <StatusBanner kind="error" message={citySearch.error} />}
+
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-sm font-medium text-slate-600">Latitude</span>
