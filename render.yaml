@@ -1,0 +1,50 @@
+# Render Blueprint — declarative deployment for the backend.
+#
+# Render reads this on "New > Blueprint" and provisions the service, so the
+# deployment is reproducible from the repo rather than reconstructed by
+# clicking through a dashboard.
+#
+# Values marked `sync: false` are deliberately NOT stored here: two are
+# secrets, and one depends on a URL that does not exist until the frontend is
+# deployed. Set all three in the Render dashboard under Environment.
+
+services:
+  - type: web
+    name: weather-explorer-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    # Singapore is Render's closest free region to India.
+    region: singapore
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Selects S3Storage over GCSStorage. Both satisfy the same
+      # StorageClient protocol; the routes are unaware of the choice.
+      - key: STORAGE_BACKEND
+        value: s3
+
+      - key: S3_BUCKET
+        value: weather-data
+
+      # Supabase Storage's S3-compatible endpoint.
+      - key: S3_ENDPOINT_URL
+        value: https://ezvhqqimvzquiubngrvx.storage.supabase.co/storage/v1/s3
+
+      - key: S3_REGION
+        value: ap-south-1
+
+      # Temporary until the frontend exists — the backend cannot know its
+      # Vercel origin before it is deployed. Tighten this to the real origin
+      # once Vercel gives you a URL; it must never be "*".
+      - key: ALLOWED_ORIGINS
+        value: http://localhost:5173
+
+      # Secrets. boto3 reads these from the process environment directly;
+      # they are deliberately not modelled as application settings so they
+      # are never logged alongside the rest of the config.
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false

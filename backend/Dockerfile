@@ -16,7 +16,8 @@ RUN groupadd --system app && useradd --system --gid app --home /app app \
     && chown -R app:app /app
 USER app
 
-# Cloud Run injects PORT and expects the container to listen on it.
+# Render and Cloud Run both inject PORT and expect the container to listen on
+# it; the default below only applies when running the image locally.
 ENV PORT=8080
 EXPOSE 8080
 
