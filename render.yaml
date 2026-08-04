@@ -35,11 +35,14 @@ services:
       - key: S3_REGION
         value: ap-south-1
 
-      # Temporary until the frontend exists — the backend cannot know its
-      # Vercel origin before it is deployed. Tighten this to the real origin
-      # once Vercel gives you a URL; it must never be "*".
+      # The deployed frontend origin. An explicit allowlist, never "*".
+      # This could only be filled in after Vercel existed — the two services
+      # cannot know each other's URLs until both are deployed, which is why
+      # locking CORS is a deliberate second pass rather than an oversight.
+      # No trailing slash: the browser sends the origin without one and the
+      # match is exact.
       - key: ALLOWED_ORIGINS
-        value: http://localhost:5173
+        value: https://weather-explorer-black.vercel.app
 
       # Secrets. boto3 reads these from the process environment directly;
       # they are deliberately not modelled as application settings so they
